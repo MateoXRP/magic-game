@@ -21,23 +21,16 @@ export function GameProvider({ children }) {
   const [hasDrawnCard, setHasDrawnCard] = useState(false);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
 
+  const [log, setLog] = useState([]);
+  function logMessage(msg) {
+    setLog(prev => [...prev, msg]);
+  }
+
   useEffect(() => {
     if (isPlayerTurn) {
-      startTurn(); // ✅ Automatically start turn when it becomes player's
+      startTurn();
     }
   }, [isPlayerTurn]);
-
-  function drawCard() {
-    if (!isPlayerTurn) return;
-    if (hasDrawnCard) {
-      alert("You’ve already drawn a card this turn.");
-      return;
-    }
-    if (library.length === 0) return;
-    setHand([...hand, library[0]]);
-    setLibrary(library.slice(1));
-    setHasDrawnCard(true);
-  }
 
   function playCard(card) {
     if (!isPlayerTurn) return;
@@ -54,6 +47,7 @@ export function GameProvider({ children }) {
       setPlayerBattlefield([...playerBattlefield, { ...card, tapped: false }]);
       setHand(hand.filter(c => c.id !== card.id));
       setPlayedLand(true);
+      logMessage(`🪨 Played ${card.name}.`);
       return;
     }
 
@@ -76,10 +70,11 @@ export function GameProvider({ children }) {
             damageTaken: 0,
           },
         ]);
+        logMessage(`🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`);
       } else if (card.type === "spell") {
-        alert("💥 Lightning Bolt for 3 damage!");
         setGraveyard([...graveyard, card]);
         setOpponentLife(hp => hp - 3);
+        logMessage(`💥 Lightning Bolt deals 3 damage to opponent.`);
       }
     }
   }
@@ -99,6 +94,7 @@ export function GameProvider({ children }) {
       setHand(prev => [...prev, library[0]]);
       setLibrary(prev => prev.slice(1));
       setHasDrawnCard(true);
+      logMessage(`📥 Drew a card.`);
     }
   }
 
@@ -127,6 +123,7 @@ export function GameProvider({ children }) {
           card.type === "creature" &&
           !card.tapped
         ) {
+          logMessage(`⚔️ ${card.name} declared as attacker.`);
           return { ...card, attacking: true, tapped: true };
         }
         return card;
@@ -158,8 +155,11 @@ export function GameProvider({ children }) {
         if (blocker.damageTaken >= blocker.defense) {
           grave.push(blocker);
         }
+
+        logMessage(`🛡️ ${blocker.name} blocked ${attacker.name}.`);
       } else {
         setOpponentLife(hp => Math.max(0, hp - attacker.attack));
+        logMessage(`💥 ${attacker.name} hits opponent for ${attacker.attack} damage.`);
       }
     });
 
@@ -184,14 +184,13 @@ export function GameProvider({ children }) {
         manaPool,
         playedLand,
         isPlayerTurn,
-        drawCard,
         playCard,
-        startTurn,
         endTurn,
         declareAttacker,
         resolveCombat,
         setPlayerBattlefield,
         setManaPool,
+        log,
       }}
     >
       {children}
