@@ -4,7 +4,7 @@ export default function Hand() {
   const { hand, playCard } = useGame();
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap justify-center gap-2">
       {hand.map((card) => (
         <div
           key={card.id}
