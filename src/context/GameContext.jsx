@@ -81,6 +81,14 @@ export function GameProvider({ children }) {
   }
 
   function startTurn() {
+    // 💥 Mana burn
+    if (manaPool > 0) {
+      setPlayerLife(prev => Math.max(0, prev - manaPool));
+      logMessage(`🔥 You took ${manaPool} mana burn damage!`);
+    }
+
+    setManaPool(0);
+
     setPlayerBattlefield(prev =>
       prev.map(c =>
         c.type === "land" || c.type === "creature"
