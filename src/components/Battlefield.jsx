@@ -6,9 +6,24 @@ export default function Battlefield() {
     setPlayerBattlefield,
     setManaPool,
     declareAttacker,
+    blockingPhase,
+    declaredAttackers,
+    opponentBattlefield,
+    blockAssignments,
+    setBlockAssignments,
   } = useGame();
 
+  const [selectedBlocker, setSelectedBlocker] = useState(null);
+
   function handleClick(cardName, cardType, cardId) {
+    if (blockingPhase) {
+      const card = playerBattlefield.find(c => c.id === cardId);
+      if (card && !card.tapped && card.type === "creature") {
+        setSelectedBlocker(prev => (prev === cardId ? null : cardId));
+      }
+      return;
+    }
+
     if (cardType === "creature") {
       declareAttacker(cardId);
       return;
@@ -32,6 +47,15 @@ export default function Battlefield() {
     }
   }
 
+  function assignBlock(attackerId) {
+    if (!selectedBlocker) return;
+    setBlockAssignments(prev => ({
+      ...prev,
+      [attackerId]: selectedBlocker,
+    }));
+    setSelectedBlocker(null);
+  }
+
   const creatures = playerBattlefield.filter(c => c.type === "creature");
 
   const landGroups = playerBattlefield
@@ -45,15 +69,21 @@ export default function Battlefield() {
 
   function renderCard(card, count = 1, tappedCount = 0) {
     const isTappable = card.type === "land" ? tappedCount < count : true;
-    const isFullyTapped = card.type === "land" ? tappedCount >= count : card.tapped;
+    const isSelected = card.id === selectedBlocker;
+    const isAssigned = Object.values(blockAssignments).includes(card.id);
+
+    let border = "border-gray-500";
+    if (isSelected) border = "border-blue-400 border-4";
+    else if (isAssigned) border = "border-green-400 border-4";
+    else if (card.attacking) border = "border-red-500 border-4";
 
     return (
       <div
         key={card.id + (count > 1 ? `-${count}` : "")}
         onClick={() => isTappable && handleClick(card.name, card.type, card.id)}
         className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
-          ${isFullyTapped ? "bg-gray-500 text-white" : getCardColor(card.color)}
-          ${card.attacking ? "border-red-500 border-4" : ""}`}
+          ${border}
+          ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}`}
       >
         <div className="text-2xl">{getCardEmoji(card)}</div>
         <div className="font-bold text-sm">{card.name}</div>
@@ -66,7 +96,7 @@ export default function Battlefield() {
         {card.attacking && (
           <div className="text-xs text-red-300">⚔️ Attacking</div>
         )}
-        {isFullyTapped && card.type === "land" && (
+        {card.tapped && card.type === "land" && (
           <div className="text-xs italic">all tapped</div>
         )}
         {card.tapped && card.type === "creature" && (
@@ -88,10 +118,36 @@ export default function Battlefield() {
           })}
           {creatures.map(renderCard)}
         </div>
+
+        {blockingPhase && selectedBlocker && (
+          <>
+            <h3 className="text-sm mt-4 font-semibold text-blue-300 text-center">Choose enemy to block:</h3>
+            <div className="flex flex-wrap justify-center gap-2 mt-2">
+              {declaredAttackers.map(attackerId => {
+                const attacker = opponentBattlefield.find(c => c.id === attackerId);
+                if (!attacker) return null;
+                return (
+                  <div
+                    key={attacker.id}
+                    onClick={() => assignBlock(attacker.id)}
+                    className={`p-2 border border-yellow-400 rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
+                      ${attacker.tapped ? "bg-gray-500 text-white" : getCardColor(attacker.color)}`}
+                  >
+                    <div className="text-2xl">{getCardEmoji(attacker)}</div>
+                    <div className="font-bold text-sm">{attacker.name}</div>
+                    <div className="text-xs mt-1">{attacker.attack}/{attacker.defense}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
+
+import { useState } from "react";
 
 function getCardColor(color) {
   switch (color) {

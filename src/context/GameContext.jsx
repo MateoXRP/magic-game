@@ -37,7 +37,12 @@ export function GameProvider({ children }) {
   const [opponentMana, setOpponentMana] = useState(0);
   const [opponentPlayedLand, setOpponentPlayedLand] = useState(false);
 
-  const [selectedTarget, setSelectedTarget] = useState(null); // ✅ NEW
+  const [selectedTarget, setSelectedTarget] = useState(null);
+
+  // ✅ Blocking system state
+  const [blockingPhase, setBlockingPhase] = useState(false);
+  const [declaredAttackers, setDeclaredAttackers] = useState([]);
+  const [blockAssignments, setBlockAssignments] = useState({});
 
   const [log, setLog] = useState([]);
   function logMessage(msg) {
@@ -60,6 +65,7 @@ export function GameProvider({ children }) {
       hand,
       setHand,
       setPlayerBattlefield,
+      setOpponentBattlefield,
       setGraveyard,
       manaPool,
       setManaPool,
@@ -70,7 +76,6 @@ export function GameProvider({ children }) {
       isPlayerTurn,
       playerBattlefield,
       opponentBattlefield,
-      setOpponentBattlefield,
       setOpponentHand,
       setOpponentMana,
       setPlayerLife,
@@ -87,7 +92,13 @@ export function GameProvider({ children }) {
       hasStartedTurn,
       isRunningCPU,
       selectedTarget,
-      setSelectedTarget, // ✅ NEW
+      setSelectedTarget,
+      blockingPhase,
+      setBlockingPhase,
+      declaredAttackers,
+      setDeclaredAttackers,
+      blockAssignments,
+      setBlockAssignments,
     };
   }
 
@@ -139,7 +150,13 @@ export function GameProvider({ children }) {
         opponentLibrary,
         opponentMana,
         selectedTarget,
-        setSelectedTarget, // ✅
+        setSelectedTarget,
+        blockingPhase,
+        setBlockingPhase,
+        declaredAttackers,
+        setDeclaredAttackers,
+        blockAssignments,
+        setBlockAssignments,
       }}
     >
       {children}

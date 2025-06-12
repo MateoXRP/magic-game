@@ -18,10 +18,12 @@ export function runOpponentTurn(state) {
     currentTurn,
     hasStartedTurn,
     isRunningCPU,
+    setBlockingPhase,
+    setDeclaredAttackers,
   } = state;
 
   setLog(prev => [...prev, `🤖 Opponent's turn begins.`]);
-  setOpponentPlayedLand(false); // ✅ Fix: allow CPU to play one land per turn
+  setOpponentPlayedLand(false); // reset land play flag
 
   let newBattlefield = [...opponentBattlefield].map(c =>
     c.type === "land" || c.type === "creature" ? { ...c, tapped: false } : c
@@ -97,18 +99,27 @@ export function runOpponentTurn(state) {
   setOpponentBattlefield(newBattlefield);
   newLog.forEach(msg => setLog(prev => [...prev, msg]));
 
-  const untappedDefenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
-  if (untappedDefenders.length === 0) {
-    const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
-    attackers.forEach(card => {
-      setPlayerLife(prev => Math.max(0, prev - card.attack));
-      setLog(prev => [...prev, `💥 ${card.name} attacks you for ${card.attack} damage.`]);
-      card.tapped = true;
-    });
+  const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
+  const defenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
+
+  if (attackers.length > 0 && defenders.length > 0) {
+    // Blockable combat — pause and wait for player to assign blockers
+    attackers.forEach(c => (c.tapped = true));
     setOpponentBattlefield([...newBattlefield]);
-  } else {
-    setLog(prev => [...prev, `🛡️ Opponent holds back due to your defenders.`]);
+    setDeclaredAttackers(attackers.map(c => c.id));
+    setBlockingPhase(true);
+    setLog(prev => [...prev, `🛡️ Awaiting player to assign blockers.`]);
+    return;
   }
+
+  // No blockers available – resolve direct damage
+  attackers.forEach(card => {
+    setPlayerLife(prev => Math.max(0, prev - card.attack));
+    setLog(prev => [...prev, `💥 ${card.name} attacks you for ${card.attack} damage.`]);
+    card.tapped = true;
+  });
+
+  setOpponentBattlefield([...newBattlefield]);
 
   currentTurn.current = "player";
   setTimeout(() => {

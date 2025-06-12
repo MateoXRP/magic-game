@@ -56,7 +56,6 @@ export function playCard(card, state) {
       setGraveyard(prev => [...prev, card]);
 
       if (selectedTarget && selectedTarget !== "opponent") {
-        // Targeting a creature
         const updated = opponentBattlefield.map(c => {
           if (c.id !== selectedTarget) return c;
           if (c.type !== "creature") return c;
@@ -80,7 +79,6 @@ export function playCard(card, state) {
             : `🔥 ${card.name} was cast, but target is gone.`,
         ]);
       } else {
-        // Targeting opponent directly
         setOpponentLife(hp => Math.max(0, hp - card.damage));
         setLog(prev => [...prev, `⚡ ${card.name} hits opponent for ${card.damage} damage.`]);
       }
@@ -125,33 +123,74 @@ export function resolveCombat(state) {
     setOpponentBattlefield,
     setGraveyard,
     setOpponentLife,
+    setPlayerLife,
     setLog,
+    blockingPhase,
+    setBlockingPhase,
+    declaredAttackers,
+    setDeclaredAttackers,
+    blockAssignments,
+    setBlockAssignments,
   } = state;
 
   const updatedPlayer = [...playerBattlefield];
   const updatedOpponent = [...opponentBattlefield];
-
-  const attackers = updatedPlayer.filter(c => c.attacking);
-  const blockers = updatedOpponent.filter(c => c.type === "creature" && !c.tapped);
   const grave = [];
 
-  attackers.forEach(attacker => {
-    const blocker = blockers.shift();
-    if (blocker) {
-      attacker.damageTaken = blocker.attack;
-      blocker.damageTaken = attacker.attack;
-      blocker.tapped = true;
-      blocker.blocking = attacker.id;
+  if (blockingPhase) {
+    // 🔁 Resolve CPU attacks vs player blockers
+    declaredAttackers.forEach(attackerId => {
+      const attacker = updatedOpponent.find(c => c.id === attackerId);
+      if (!attacker) return;
 
-      if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
-      if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
+      const blockerId = blockAssignments[attackerId];
+      if (blockerId) {
+        const blocker = updatedPlayer.find(c => c.id === blockerId);
+        if (!blocker) return;
 
-      setLog(prev => [...prev, `🛡️ ${blocker.name} blocked ${attacker.name}.`]);
-    } else {
-      setOpponentLife(hp => Math.max(0, hp - attacker.attack));
-      setLog(prev => [...prev, `💥 ${attacker.name} hits opponent for ${attacker.attack} damage.`]);
-    }
-  });
+        attacker.damageTaken = blocker.attack;
+        blocker.damageTaken = attacker.attack;
+
+        setLog(prev => [
+          ...prev,
+          `🛡️ ${blocker.name} blocks ${attacker.name}.`,
+        ]);
+
+        if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
+        if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
+      } else {
+        setPlayerLife(prev => Math.max(0, prev - attacker.attack));
+        setLog(prev => [
+          ...prev,
+          `💥 ${attacker.name} hits you for ${attacker.attack} damage.`,
+        ]);
+      }
+
+      attacker.tapped = true;
+    });
+  } else {
+    // 🔁 Resolve player attacks vs CPU
+    const attackers = updatedPlayer.filter(c => c.attacking);
+    const blockers = updatedOpponent.filter(c => c.type === "creature" && !c.tapped);
+
+    attackers.forEach(attacker => {
+      const blocker = blockers.shift();
+      if (blocker) {
+        attacker.damageTaken = blocker.attack;
+        blocker.damageTaken = attacker.attack;
+        blocker.tapped = true;
+        blocker.blocking = attacker.id;
+
+        if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
+        if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
+
+        setLog(prev => [...prev, `🛡️ ${blocker.name} blocked ${attacker.name}.`]);
+      } else {
+        setOpponentLife(hp => Math.max(0, hp - attacker.attack));
+        setLog(prev => [...prev, `💥 ${attacker.name} hits opponent for ${attacker.attack} damage.`]);
+      }
+    });
+  }
 
   const remainingPlayer = updatedPlayer.filter(c => !grave.includes(c));
   const remainingOpponent = updatedOpponent.filter(c => !grave.includes(c));
@@ -161,12 +200,26 @@ export function resolveCombat(state) {
       ...c,
       attacking: false,
       tapped: c.tapped || c.attacking,
+      blocking: null,
+      damageTaken: 0,
     }))
   );
+
   setOpponentBattlefield(
-    remainingOpponent.map(c => ({ ...c, blocking: null }))
+    remainingOpponent.map(c => ({
+      ...c,
+      blocking: null,
+      damageTaken: 0,
+    }))
   );
+
   setGraveyard(prev => [...prev, ...grave]);
+
+  if (blockingPhase) {
+    setBlockingPhase(false);
+    setDeclaredAttackers([]);
+    setBlockAssignments({});
+  }
 }
 
 export function startTurn(state) {

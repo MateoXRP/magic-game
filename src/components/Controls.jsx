@@ -8,12 +8,20 @@ export default function Controls() {
     resolveCombat,
     playerLife,
     opponentLife,
+    blockingPhase,
   } = useGame();
 
   return (
     <div className="flex justify-center mt-6">
       <div className="space-y-4 w-full max-w-3xl text-center">
-        {isPlayerTurn && (
+        {blockingPhase ? (
+          <button
+            onClick={resolveCombat}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          >
+            🛡 Resolve Block
+          </button>
+        ) : isPlayerTurn ? (
           <div className="flex flex-wrap justify-center gap-2">
             <button
               onClick={resolveCombat}
@@ -28,7 +36,8 @@ export default function Controls() {
               End Turn
             </button>
           </div>
-        )}
+        ) : null}
+
         <div className="mt-2 text-white">
           <span className="mr-4">🔥 Mana: {manaPool}</span>
           <span className="mr-4">❤️ You: {playerLife}</span>
