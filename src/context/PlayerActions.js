@@ -143,7 +143,6 @@ export function resolveSpell(targetId, state) {
         return { ...c, defense: newDefense };
       });
 
-      // ✅ Fix: Only remove dead creatures, not all cards
       const remaining = updated.filter(c =>
         c.type !== "creature" || c.defense > 0
       );
@@ -214,11 +213,23 @@ export function startTurn(state) {
 
   setPlayerBattlefield(prev =>
     prev.map(c =>
-      c.type === "land" || c.type === "creature"
+      c.type === "creature" && c.boosted
+        ? {
+            ...c,
+            attack: c.attack - 3,
+            defense: c.defense - 3,
+            boosted: false,
+            tapped: false,
+            attacking: false,
+            blocking: null,
+            damageTaken: 0,
+          }
+        : c.type === "land" || c.type === "creature"
         ? { ...c, tapped: false, attacking: false, blocking: null, damageTaken: 0 }
         : c
     )
   );
+
   setPlayedLand(false);
   setHasDrawnCard(false);
 

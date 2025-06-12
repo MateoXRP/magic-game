@@ -11,10 +11,24 @@ export function runOpponentTurn(state) {
   setLog(prev => [...prev, `🤖 Opponent's turn begins.`]);
   setOpponentPlayedLand(false); // reset land play flag
 
-  // ✅ Untap all lands/creatures first
-  const untappedBattlefield = opponentBattlefield.map(c =>
-    c.type === "land" || c.type === "creature" ? { ...c, tapped: false } : c
-  );
+  // ✅ Untap all lands/creatures and remove temporary buffs
+  const untappedBattlefield = opponentBattlefield.map(c => {
+    if (c.type === "creature" && c.boosted) {
+      return {
+        ...c,
+        attack: c.attack - 3,
+        defense: c.defense - 3,
+        tapped: false,
+        boosted: false,
+      };
+    }
+
+    if (c.type === "land" || c.type === "creature") {
+      return { ...c, tapped: false };
+    }
+
+    return c;
+  });
 
   setOpponentBattlefield(untappedBattlefield);
 
@@ -23,7 +37,7 @@ export function runOpponentTurn(state) {
     runOpponentTurnStep1({
       ...state,
       opponentBattlefield: untappedBattlefield,
-      opponentPlayedLand: false, // ✅ explicitly pass updated value
+      opponentPlayedLand: false,
     });
   }, 500);
 }
@@ -44,7 +58,6 @@ function runOpponentTurnStep1(state) {
   const battlefield = [...opponentBattlefield];
   let hand = [...opponentHand];
 
-  // ✅ Draw a card if library is not empty
   if (opponentLibrary && opponentLibrary.length > 0) {
     const drawnCard = opponentLibrary[0];
     hand.push(drawnCard);
@@ -58,7 +71,6 @@ function runOpponentTurnStep1(state) {
     setLog(prev => [...prev, `❗ Opponent has no cards left to draw.`]);
   }
 
-  // ✅ Play a land if available
   const land = hand.find(c => c.type === "land");
   if (land && !opponentPlayedLand) {
     battlefield.push({ ...land, tapped: false });
@@ -75,7 +87,6 @@ function runOpponentTurnStep1(state) {
 
   setOpponentBattlefield(battlefield);
 
-  // ✅ Delay before moving to tapping + spells
   setTimeout(() => {
     runOpponentTurnStep2({ ...state, opponentBattlefield: battlefield, opponentHand: hand });
   }, 500);
@@ -118,7 +129,6 @@ function runOpponentTurnStep2(state) {
     }
   }
 
-  // ✅ Tap required number of lands
   let manaGenerated = 0;
   for (const land of battlefield) {
     if (land.type === "land" && !land.tapped && manaGenerated < manaNeeded) {
@@ -168,7 +178,6 @@ function runOpponentTurnStep2(state) {
   setGraveyard(prev => [...prev, ...newGraveyard]);
   newLog.forEach(msg => setLog(prev => [...prev, msg]));
 
-  // ✅ Check for attackers
   const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
   const defenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
 
@@ -181,7 +190,6 @@ function runOpponentTurnStep2(state) {
     return;
   }
 
-  // ✅ No blockers: deal direct damage
   attackers.forEach(card => {
     setPlayerLife(prev => Math.max(0, prev - card.attack));
     setLog(prev => [...prev, `💥 ${card.name} attacks you for ${card.attack} damage.`]);
