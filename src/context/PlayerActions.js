@@ -167,6 +167,14 @@ export function resolveCombat(state) {
   const updatedOpponent = [...opponentBattlefield];
   const grave = [];
 
+  const getEffectivePower = (card, battlefield) => {
+    if (card.name === "Goblin" &&
+        battlefield.some(c => c.name === "Goblin Chief" && c.id !== card.id)) {
+      return card.attack + 1;
+    }
+    return card.attack;
+  };
+
   if (blockingPhase) {
     declaredAttackers.forEach(attackerId => {
       const attacker = updatedOpponent.find(c => c.id === attackerId);
@@ -176,17 +184,8 @@ export function resolveCombat(state) {
       const blocker = blockerId ? updatedPlayer.find(c => c.id === blockerId) : null;
 
       if (blockerId && blocker) {
-        let attackerPower = attacker.attack;
-        let blockerPower = blocker.attack;
-
-        if (attacker.name === "Goblin" &&
-            updatedOpponent.some(c => c.name === "Goblin Chief" && c.id !== attacker.id)) {
-          attackerPower += 1;
-        }
-        if (blocker.name === "Goblin" &&
-            updatedPlayer.some(c => c.name === "Goblin Chief" && c.id !== blocker.id)) {
-          blockerPower += 1;
-        }
+        const attackerPower = getEffectivePower(attacker, updatedOpponent);
+        const blockerPower = getEffectivePower(blocker, updatedPlayer);
 
         attacker.damageTaken = blockerPower;
         blocker.damageTaken = attackerPower;
@@ -198,8 +197,9 @@ export function resolveCombat(state) {
       } else if (blockerId) {
         setLog(prev => [...prev, `⚰️ ${attacker.name} was blocked, but blocker is gone.`]);
       } else {
-        setPlayerLife(hp => Math.max(0, hp - attacker.attack));
-        setLog(prev => [...prev, `💥 ${attacker.name} hits you for ${attacker.attack} damage.`]);
+        const damage = getEffectivePower(attacker, updatedOpponent);
+        setPlayerLife(hp => Math.max(0, hp - damage));
+        setLog(prev => [...prev, `💥 ${attacker.name} hits you for ${damage} damage.`]);
       }
 
       attacker.tapped = true;
@@ -211,17 +211,8 @@ export function resolveCombat(state) {
     attackers.forEach(attacker => {
       const blocker = blockers.shift();
       if (blocker) {
-        let attackerPower = attacker.attack;
-        let blockerPower = blocker.attack;
-
-        if (attacker.name === "Goblin" &&
-            updatedPlayer.some(c => c.name === "Goblin Chief" && c.id !== attacker.id)) {
-          attackerPower += 1;
-        }
-        if (blocker.name === "Goblin" &&
-            updatedOpponent.some(c => c.name === "Goblin Chief" && c.id !== blocker.id)) {
-          blockerPower += 1;
-        }
+        const attackerPower = getEffectivePower(attacker, updatedPlayer);
+        const blockerPower = getEffectivePower(blocker, updatedOpponent);
 
         attacker.damageTaken = blockerPower;
         blocker.damageTaken = attackerPower;
@@ -233,8 +224,9 @@ export function resolveCombat(state) {
 
         setLog(prev => [...prev, `🛡️ ${blocker.name} blocked ${attacker.name}.`]);
       } else {
-        setOpponentLife(hp => Math.max(0, hp - attacker.attack));
-        setLog(prev => [...prev, `💥 ${attacker.name} hits opponent for ${attacker.attack} damage.`]);
+        const damage = getEffectivePower(attacker, updatedPlayer);
+        setOpponentLife(hp => Math.max(0, hp - damage));
+        setLog(prev => [...prev, `💥 ${attacker.name} hits opponent for ${damage} damage.`]);
       }
     });
   }
