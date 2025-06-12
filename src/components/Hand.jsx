@@ -1,6 +1,6 @@
 // src/components/Hand.jsx
-
 import { useGame } from "../context/GameContext";
+import { getCardColor } from "../utils";
 
 export default function Hand() {
   const { hand, playCard } = useGame();
@@ -22,15 +22,4 @@ export default function Hand() {
       ))}
     </div>
   );
-}
-
-function getCardColor(color) {
-  switch (color) {
-    case "red": return "bg-red-700 text-white";
-    case "green": return "bg-green-700 text-white";
-    case "blue": return "bg-blue-700 text-white";
-    case "white": return "bg-yellow-200 text-black";
-    case "black": return "bg-gray-800 text-white";
-    default: return "bg-gray-600 text-white";
-  }
 }

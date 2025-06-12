@@ -1,7 +1,7 @@
 // src/components/Battlefield.jsx
-
 import { useGame } from "../context/GameContext";
 import { useState, useEffect } from "react";
+import { getCardColor, getEffectiveAttack } from "../utils";
 
 export default function Battlefield() {
   const {
@@ -162,25 +162,4 @@ export default function Battlefield() {
       </div>
     </div>
   );
-}
-
-function getCardColor(color) {
-  switch (color) {
-    case "red": return "bg-red-700 text-white";
-    case "green": return "bg-green-700 text-white";
-    case "blue": return "bg-blue-700 text-white";
-    case "white": return "bg-yellow-200 text-black";
-    case "black": return "bg-gray-800 text-white";
-    default: return "bg-gray-600 text-white";
-  }
-}
-
-function getEffectiveAttack(card, battlefield) {
-  const hasChief = battlefield.some(
-    c => c.name === "Goblin Chief" && c.id !== card.id
-  );
-  if (hasChief && card.name === "Goblin") {
-    return card.attack + 1;
-  }
-  return card.attack;
 }
