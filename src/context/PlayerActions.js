@@ -33,33 +33,59 @@ export function playCard(card, state) {
     return;
   }
 
-  if (card.type === "creature" || card.type === "spell") {
-    if (manaPool < card.manaCost) {
-      return alert("Not enough mana!");
-    }
+  const color = card.color;
+  const cost = card.manaCost || 0;
+  const available = manaPool[color] || 0;
 
-    setManaPool(prev => prev - card.manaCost);
-    setHand(prev => prev.filter(c => c.id !== card.id));
+  if (cost > available) {
+    return alert(`Not enough ${color} mana!`);
+  }
 
-    if (card.type === "creature") {
-      setPlayerBattlefield(prev => [
-        ...prev,
-        {
-          ...card,
-          tapped: false,
-          attacking: false,
-          blocking: null,
-          damageTaken: 0,
-        },
-      ]);
+  setManaPool(prev => ({
+    ...prev,
+    [color]: prev[color] - cost,
+  }));
+  setHand(prev => prev.filter(c => c.id !== card.id));
+
+  if (card.type === "creature") {
+    setPlayerBattlefield(prev => [
+      ...prev,
+      {
+        ...card,
+        tapped: false,
+        attacking: false,
+        blocking: null,
+        damageTaken: 0,
+      },
+    ]);
+    setLog(prev => [
+      ...prev,
+      `🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`,
+      card.special ? `✨ ${card.name} — ${card.special}` : null,
+    ].filter(Boolean));
+  } else if (card.type === "spell") {
+    setGraveyard(prev => [...prev, card]);
+
+    if (card.name === "Giant Growth" && selectedTarget) {
+      const updated = opponentBattlefield.map(c => {
+        if (c.id !== selectedTarget || c.type !== "creature") return c;
+        return {
+          ...c,
+          attack: c.attack + (card.boost?.attack || 3),
+          defense: c.defense + (card.boost?.defense || 3),
+          boosted: true,
+        };
+      });
+
+      const target = opponentBattlefield.find(c => c.id === selectedTarget);
+      setOpponentBattlefield(updated);
       setLog(prev => [
         ...prev,
-        `🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`,
-        card.special ? `✨ ${card.name} — ${card.special}` : null,
-      ].filter(Boolean));
-    } else if (card.type === "spell") {
-      setGraveyard(prev => [...prev, card]);
-
+        target
+          ? `🌿 ${card.name} boosts ${target.name} with +${card.boost.attack}/${card.boost.defense}.`
+          : `🌿 ${card.name} was cast, but target is gone.`,
+      ]);
+    } else if (card.damage) {
       if (selectedTarget && selectedTarget !== "opponent") {
         const updated = opponentBattlefield.map(c => {
           if (c.id !== selectedTarget) return c;
@@ -74,7 +100,6 @@ export function playCard(card, state) {
         );
 
         setOpponentBattlefield(updatedAfterKill);
-
         setLog(prev => [
           ...prev,
           target
@@ -87,9 +112,9 @@ export function playCard(card, state) {
         setOpponentLife(hp => Math.max(0, hp - card.damage));
         setLog(prev => [...prev, `⚡ ${card.name} hits opponent for ${card.damage} damage.`]);
       }
-
-      setSelectedTarget(null);
     }
+
+    setSelectedTarget(null);
   }
 }
 
@@ -151,8 +176,17 @@ export function resolveCombat(state) {
       const blocker = blockerId ? updatedPlayer.find(c => c.id === blockerId) : null;
 
       if (blockerId && blocker) {
-        const attackerPower = getEffectiveAttack(attacker, updatedOpponent);
-        const blockerPower = getEffectiveAttack(blocker, updatedPlayer);
+        let attackerPower = attacker.attack;
+        let blockerPower = blocker.attack;
+
+        if (attacker.name === "Goblin" &&
+            updatedOpponent.some(c => c.name === "Goblin Chief" && c.id !== attacker.id)) {
+          attackerPower += 1;
+        }
+        if (blocker.name === "Goblin" &&
+            updatedPlayer.some(c => c.name === "Goblin Chief" && c.id !== blocker.id)) {
+          blockerPower += 1;
+        }
 
         attacker.damageTaken = blockerPower;
         blocker.damageTaken = attackerPower;
@@ -161,13 +195,11 @@ export function resolveCombat(state) {
 
         if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
         if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
+      } else if (blockerId) {
+        setLog(prev => [...prev, `⚰️ ${attacker.name} was blocked, but blocker is gone.`]);
       } else {
-        const attackerPower = getEffectiveAttack(attacker, updatedOpponent);
-        setPlayerLife(hp => Math.max(0, hp - attackerPower));
-        setLog(prev => [
-          ...prev,
-          `💥 ${attacker.name} was unblocked and hits you for ${attackerPower} damage.`
-        ]);
+        setPlayerLife(hp => Math.max(0, hp - attacker.attack));
+        setLog(prev => [...prev, `💥 ${attacker.name} hits you for ${attacker.attack} damage.`]);
       }
 
       attacker.tapped = true;
@@ -179,8 +211,17 @@ export function resolveCombat(state) {
     attackers.forEach(attacker => {
       const blocker = blockers.shift();
       if (blocker) {
-        const attackerPower = getEffectiveAttack(attacker, updatedPlayer);
-        const blockerPower = getEffectiveAttack(blocker, updatedOpponent);
+        let attackerPower = attacker.attack;
+        let blockerPower = blocker.attack;
+
+        if (attacker.name === "Goblin" &&
+            updatedPlayer.some(c => c.name === "Goblin Chief" && c.id !== attacker.id)) {
+          attackerPower += 1;
+        }
+        if (blocker.name === "Goblin" &&
+            updatedOpponent.some(c => c.name === "Goblin Chief" && c.id !== blocker.id)) {
+          blockerPower += 1;
+        }
 
         attacker.damageTaken = blockerPower;
         blocker.damageTaken = attackerPower;
@@ -192,9 +233,8 @@ export function resolveCombat(state) {
 
         setLog(prev => [...prev, `🛡️ ${blocker.name} blocked ${attacker.name}.`]);
       } else {
-        const attackerPower = getEffectiveAttack(attacker, updatedPlayer);
-        setOpponentLife(hp => Math.max(0, hp - attackerPower));
-        setLog(prev => [...prev, `💥 ${attacker.name} hits opponent for ${attackerPower} damage.`]);
+        setOpponentLife(hp => Math.max(0, hp - attacker.attack));
+        setLog(prev => [...prev, `💥 ${attacker.name} hits opponent for ${attacker.attack} damage.`]);
       }
     });
   }
@@ -253,12 +293,13 @@ export function startTurn(state) {
     setLibrary,
   } = state;
 
-  if (manaPool > 0) {
-    setPlayerLife(prev => Math.max(0, prev - manaPool));
-    setLog(prev => [...prev, `🔥 You took ${manaPool} mana burn damage!`]);
+  const burn = Object.values(manaPool).reduce((a, b) => a + b, 0);
+  if (burn > 0) {
+    setPlayerLife(prev => Math.max(0, prev - burn));
+    setLog(prev => [...prev, `🔥 You took ${burn} mana burn damage!`]);
   }
 
-  setManaPool(0);
+  setManaPool({ red: 0, green: 0 });
 
   setPlayerBattlefield(prev =>
     prev.map(c =>
@@ -276,14 +317,4 @@ export function startTurn(state) {
     setHasDrawnCard(true);
     setLog(prev => [...prev, `📅 Drew a card.`]);
   }
-}
-
-function getEffectiveAttack(card, battlefield) {
-  const hasChief = battlefield.some(
-    c => c.name === "Goblin Chief" && c.id !== card.id
-  );
-  if (hasChief && card.name === "Goblin") {
-    return card.attack + 1;
-  }
-  return card.attack;
 }

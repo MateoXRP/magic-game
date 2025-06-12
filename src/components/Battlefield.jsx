@@ -1,3 +1,5 @@
+// src/components/Battlefield.jsx
+
 import { useGame } from "../context/GameContext";
 import { useState, useEffect } from "react";
 
@@ -16,12 +18,11 @@ export default function Battlefield() {
 
   const [selectedBlocker, setSelectedBlocker] = useState(null);
 
-  // ✅ Reset blue border after combat resolves
   useEffect(() => {
     if (!blockingPhase) setSelectedBlocker(null);
   }, [blockingPhase]);
 
-  function handleClick(cardName, cardType, cardId) {
+  function handleClick(cardName, cardType, cardId, cardColor) {
     if (blockingPhase) {
       const card = playerBattlefield.find(c => c.id === cardId);
       if (card && !card.tapped && card.type === "creature") {
@@ -48,7 +49,10 @@ export default function Battlefield() {
 
       if (tapped) {
         setPlayerBattlefield(updated);
-        setManaPool(prev => prev + 1);
+        setManaPool(prev => ({
+          ...prev,
+          [cardColor]: (prev[cardColor] || 0) + 1,
+        }));
       }
     }
   }
@@ -87,14 +91,14 @@ export default function Battlefield() {
     return (
       <div
         key={card.id + (count > 1 ? `-${count}` : "")}
-        onClick={() => isTappable && handleClick(card.name, card.type, card.id)}
+        onClick={() => isTappable && handleClick(card.name, card.type, card.id, card.color)}
         className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
           ${border}
           ${(card.type === "creature" && card.tapped) || (card.type === "land" && isFullyTapped)
             ? "bg-gray-500 text-white"
             : getCardColor(card.color)}`}
       >
-        <div className="text-2xl">{getCardEmoji(card)}</div>
+        <div className="text-2xl">{card.emoji}</div>
         <div className="font-bold text-sm">{card.name}</div>
         {card.type === "creature" && (
           <div className="text-xs mt-1">
@@ -144,7 +148,7 @@ export default function Battlefield() {
                     className={`p-2 border border-yellow-400 rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
                       ${attacker.tapped ? "bg-gray-500 text-white" : getCardColor(attacker.color)}`}
                   >
-                    <div className="text-2xl">{getCardEmoji(attacker)}</div>
+                    <div className="text-2xl">{attacker.emoji}</div>
                     <div className="font-bold text-sm">{attacker.name}</div>
                     <div className="text-xs mt-1">
                       {getEffectiveAttack(attacker, opponentBattlefield)}/{attacker.defense}
@@ -162,26 +166,13 @@ export default function Battlefield() {
 
 function getCardColor(color) {
   switch (color) {
-    case "red":
-      return "bg-red-700 text-white";
-    case "blue":
-      return "bg-blue-700 text-white";
-    case "green":
-      return "bg-green-700 text-white";
-    case "white":
-      return "bg-yellow-200 text-black";
-    case "black":
-      return "bg-gray-800 text-white";
-    default:
-      return "bg-gray-600 text-white";
+    case "red": return "bg-red-700 text-white";
+    case "green": return "bg-green-700 text-white";
+    case "blue": return "bg-blue-700 text-white";
+    case "white": return "bg-yellow-200 text-black";
+    case "black": return "bg-gray-800 text-white";
+    default: return "bg-gray-600 text-white";
   }
-}
-
-function getCardEmoji(card) {
-  if (card.name === "Mountain") return "⛰️";
-  if (card.name === "Goblin" || card.name === "Goblin Chief") return "👺";
-  if (card.name === "Lightning Bolt") return "⚡";
-  return "🎴";
 }
 
 function getEffectiveAttack(card, battlefield) {

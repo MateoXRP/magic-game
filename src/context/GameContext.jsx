@@ -1,5 +1,4 @@
 // src/context/GameContext.jsx
-
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { sampleDeck } from "../data/cards";
 import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerActions";
@@ -22,25 +21,18 @@ export function GameProvider({ children }) {
   const [hand, setHand] = useState(initialHand);
   const [library, setLibrary] = useState(initialLibrary);
   const [graveyard, setGraveyard] = useState([]);
-
   const [playerBattlefield, setPlayerBattlefield] = useState([]);
   const [opponentBattlefield, setOpponentBattlefield] = useState([]);
 
   const [playerLife, setPlayerLifeState] = useState(20);
   const [opponentLife, setOpponentLifeState] = useState(20);
-
   const playerLifeRef = useRef(playerLife);
   const opponentLifeRef = useRef(opponentLife);
 
-  useEffect(() => {
-    playerLifeRef.current = playerLife;
-  }, [playerLife]);
+  useEffect(() => { playerLifeRef.current = playerLife; }, [playerLife]);
+  useEffect(() => { opponentLifeRef.current = opponentLife; }, [opponentLife]);
 
-  useEffect(() => {
-    opponentLifeRef.current = opponentLife;
-  }, [opponentLife]);
-
-  const [manaPool, setManaPool] = useState(0);
+  const [manaPool, setManaPool] = useState({ red: 0, green: 0 });
   const [playedLand, setPlayedLand] = useState(false);
   const [hasDrawnCard, setHasDrawnCard] = useState(false);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
@@ -55,10 +47,7 @@ export function GameProvider({ children }) {
   const [blockingPhase, setBlockingPhase] = useState(false);
   const [declaredAttackers, setDeclaredAttackers] = useState([]);
   const [blockAssignments, setBlockAssignments] = useState({});
-
   const [log, setLog] = useState([]);
-  const logMessage = (msg) => setLog(prev => [...prev, msg]);
-
   const [gameOver, setGameOver] = useState(false);
   const [gameResult, setGameResult] = useState(null);
 
@@ -183,7 +172,7 @@ export function GameProvider({ children }) {
     setPlayerBattlefield([]);
     setOpponentBattlefield([]);
     setGraveyard([]);
-    setManaPool(0);
+    setManaPool({ red: 0, green: 0 });
     setPlayedLand(false);
     setHasDrawnCard(false);
     setIsPlayerTurn(true);

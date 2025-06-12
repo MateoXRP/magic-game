@@ -1,3 +1,5 @@
+// src/components/EnemyBattlefield.jsx
+
 import { useGame } from "../context/GameContext";
 
 export default function EnemyBattlefield() {
@@ -27,7 +29,7 @@ export default function EnemyBattlefield() {
         className={`p-2 border rounded w-[100px] h-[120px] text-center flex flex-col justify-center
           ${isFullyTapped ? "bg-gray-500 text-white" : getCardColor(card.color)}`}
       >
-        <div className="text-2xl">{getCardEmoji(card)}</div>
+        <div className="text-2xl">{card.emoji}</div>
         <div className="font-bold text-sm">{card.name}</div>
         {count > 1 && (
           <div className="text-xs mt-1">{count - tappedCount}</div>
@@ -62,7 +64,7 @@ export default function EnemyBattlefield() {
                   ${isSelected ? "border-yellow-400 border-4" : "border-gray-500"}
                   ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}`}
               >
-                <div className="text-2xl">{getCardEmoji(card)}</div>
+                <div className="text-2xl">{card.emoji}</div>
                 <div className="font-bold text-sm">{card.name}</div>
                 <div className="text-xs mt-1">{getEffectiveAttack(card, opponentBattlefield)}/{card.defense}</div>
                 {card.tapped && <div className="text-xs italic">tapped</div>}
@@ -77,26 +79,13 @@ export default function EnemyBattlefield() {
 
 function getCardColor(color) {
   switch (color) {
-    case "red":
-      return "bg-red-700 text-white";
-    case "blue":
-      return "bg-blue-700 text-white";
-    case "green":
-      return "bg-green-700 text-white";
-    case "white":
-      return "bg-yellow-200 text-black";
-    case "black":
-      return "bg-gray-800 text-white";
-    default:
-      return "bg-gray-600 text-white";
+    case "red": return "bg-red-700 text-white";
+    case "green": return "bg-green-700 text-white";
+    case "blue": return "bg-blue-700 text-white";
+    case "white": return "bg-yellow-200 text-black";
+    case "black": return "bg-gray-800 text-white";
+    default: return "bg-gray-600 text-white";
   }
-}
-
-function getCardEmoji(card) {
-  if (card.name === "Mountain") return "⛰️";
-  if (card.name === "Goblin" || card.name === "Goblin Chief") return "👺";
-  if (card.name === "Lightning Bolt") return "⚡";
-  return "🎴";
 }
 
 function getEffectiveAttack(card, battlefield) {

@@ -1,3 +1,5 @@
+// src/components/Controls.jsx
+
 import { useGame } from "../context/GameContext";
 
 export default function Controls() {
@@ -39,7 +41,8 @@ export default function Controls() {
         ) : null}
 
         <div className="mt-2 text-white">
-          <span className="mr-4">🔥 Mana: {manaPool}</span>
+          <span className="mr-4">🔥 Red: {manaPool.red}</span>
+          <span className="mr-4">🌲 Green: {manaPool.green}</span>
           <span className="mr-4">❤️ You: {playerLife}</span>
           <span>💀 Enemy: {opponentLife}</span>
         </div>
