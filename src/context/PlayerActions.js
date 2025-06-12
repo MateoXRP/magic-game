@@ -17,6 +17,7 @@ export function playCard(card, state) {
     opponentBattlefield,
     selectedTarget,
     setSelectedTarget,
+    playerBattlefield,
   } = state;
 
   if (!isPlayerTurn) return;
@@ -33,18 +34,27 @@ export function playCard(card, state) {
     return;
   }
 
-  const color = card.color;
   const cost = card.manaCost || 0;
-  const available = manaPool[color] || 0;
+  const totalAvailable = (manaPool.red || 0) + (manaPool.green || 0);
+  const availableColor = manaPool[card.color] || 0;
 
-  if (cost > available) {
-    return alert(`Not enough ${color} mana!`);
+  if (cost > totalAvailable || availableColor < 1) {
+    return alert(`You need at least 1 ${card.color} mana and ${cost} total mana to play this card.`);
   }
 
-  setManaPool(prev => ({
-    ...prev,
-    [color]: prev[color] - cost,
-  }));
+  // Spend 1 of the card's color
+  const newMana = { ...manaPool, [card.color]: manaPool[card.color] - 1 };
+  let remaining = cost - 1;
+
+  // Spend remaining cost from any pool
+  for (const color of ["red", "green"]) {
+    while (remaining > 0 && newMana[color] > 0) {
+      newMana[color]--;
+      remaining--;
+    }
+  }
+
+  setManaPool(newMana);
   setHand(prev => prev.filter(c => c.id !== card.id));
 
   if (card.type === "creature") {
@@ -67,7 +77,7 @@ export function playCard(card, state) {
     setGraveyard(prev => [...prev, card]);
 
     if (card.name === "Giant Growth" && selectedTarget) {
-      const updated = opponentBattlefield.map(c => {
+      const updated = playerBattlefield.map(c => {
         if (c.id !== selectedTarget || c.type !== "creature") return c;
         return {
           ...c,
@@ -77,8 +87,8 @@ export function playCard(card, state) {
         };
       });
 
-      const target = opponentBattlefield.find(c => c.id === selectedTarget);
-      setOpponentBattlefield(updated);
+      const target = playerBattlefield.find(c => c.id === selectedTarget);
+      setPlayerBattlefield(updated);
       setLog(prev => [
         ...prev,
         target
