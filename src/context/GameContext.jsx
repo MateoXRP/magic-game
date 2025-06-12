@@ -1,7 +1,9 @@
-// Full and final GameContext.jsx with refactored runOpponentTurn()
+// src/context/GameContext.jsx
 
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { sampleDeck } from "../data/cards";
+import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerActions";
+import { runOpponentTurn } from "./OpponentAI";
 
 const GameContext = createContext();
 
@@ -47,253 +49,66 @@ export function GameProvider({ children }) {
   useEffect(() => {
     if (currentTurn.current === "player" && turnCount > 1 && !hasStartedTurn.current) {
       hasStartedTurn.current = true;
-      startTurn();
+      startTurn(getStateForActions());
     }
   }, [turnCount]);
 
-  function playCard(card) {
-    if (!isPlayerTurn) return;
-
-    const isInHand = hand.find(c => c.id === card.id);
-    if (!isInHand) return;
-
-    if (card.type === "land") {
-      if (playedLand) return;
-      setPlayedLand(true);
-      setPlayerBattlefield(prev => [...prev, { ...card, tapped: false }]);
-      setHand(prev => prev.filter(c => c.id !== card.id));
-      logMessage(`🪨 Played ${card.name}.`);
-      return;
-    }
-
-    if (card.type === "creature" || card.type === "spell") {
-      if (manaPool < card.manaCost) {
-        return alert("Not enough mana!");
-      }
-
-      setManaPool(prev => prev - card.manaCost);
-      setHand(prev => prev.filter(c => c.id !== card.id));
-
-      if (card.type === "creature") {
-        setPlayerBattlefield(prev => [
-          ...prev,
-          {
-            ...card,
-            tapped: false,
-            attacking: false,
-            blocking: null,
-            damageTaken: 0,
-          },
-        ]);
-        logMessage(`🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`);
-      } else if (card.type === "spell") {
-        setGraveyard(prev => [...prev, card]);
-        setOpponentLife(hp => hp - 3);
-        logMessage(`💥 Lightning Bolt deals 3 damage to opponent.`);
-      }
-    }
+  function getStateForActions() {
+    return {
+      hand,
+      setHand,
+      setPlayerBattlefield,
+      setGraveyard,
+      manaPool,
+      setManaPool,
+      playedLand,
+      setPlayedLand,
+      setLog,
+      setOpponentLife,
+      isPlayerTurn,
+      playerBattlefield,
+      opponentBattlefield,
+      setOpponentBattlefield,
+      setOpponentHand,
+      setOpponentMana,
+      setPlayerLife,
+      setOpponentPlayedLand,
+      opponentHand,
+      opponentPlayedLand,
+      setGraveyard,
+      setLibrary,
+      setHasDrawnCard,
+      library,
+      currentTurn,
+      setTurnCount,
+      setIsPlayerTurn,
+      hasStartedTurn,
+      isRunningCPU,
+    };
   }
 
-  function startTurn() {
-    if (manaPool > 0) {
-      setPlayerLife(prev => Math.max(0, prev - manaPool));
-      logMessage(`🔥 You took ${manaPool} mana burn damage!`);
-    }
-
-    setManaPool(0);
-
-    setPlayerBattlefield(prev =>
-      prev.map(c =>
-        c.type === "land" || c.type === "creature"
-          ? { ...c, tapped: false, attacking: false, blocking: null, damageTaken: 0 }
-          : c
-      )
-    );
-    setPlayedLand(false);
-    setHasDrawnCard(false);
-
-    if (library.length > 0) {
-      setHand(prev => [...prev, library[0]]);
-      setLibrary(prev => prev.slice(1));
-      setHasDrawnCard(true);
-      logMessage(`📅 Drew a card.`);
-    }
+  function handlePlayCard(card) {
+    playCard(card, getStateForActions());
   }
 
-  function endTurn() {
+  function handleDeclareAttacker(cardId) {
+    declareAttacker(cardId, getStateForActions());
+  }
+
+  function handleResolveCombat() {
+    resolveCombat(getStateForActions());
+  }
+
+  function handleEndTurn() {
     currentTurn.current = "opponent";
     setIsPlayerTurn(false);
 
     setTimeout(() => {
       if (!isRunningCPU.current) {
         isRunningCPU.current = true;
-        runOpponentTurn();
+        runOpponentTurn(getStateForActions());
       }
     }, 300);
-  }
-
-  function runOpponentTurn() {
-    logMessage(`🤖 Opponent's turn begins.`);
-
-    let newBattlefield = [...opponentBattlefield].map(c =>
-      c.type === "land" || c.type === "creature" ? { ...c, tapped: false } : c
-    );
-
-    const land = opponentHand.find(c => c.type === "land");
-    if (land && !opponentPlayedLand) {
-      newBattlefield.push({ ...land, tapped: false });
-      setOpponentHand(prev => prev.filter(c => c.id !== land.id));
-      setOpponentPlayedLand(true);
-      logMessage(`⛰️ Opponent plays a land.`);
-    }
-
-    const playableCards = [...opponentHand]
-      .filter(c => c.type === "creature" || c.type === "spell")
-      .sort((a, b) => (a.type === "creature" ? -1 : 1));
-
-    let manaNeeded = 0;
-    const availableLands = newBattlefield.filter(c => c.type === "land" && !c.tapped);
-    const chosenCards = [];
-
-    for (const card of playableCards) {
-      if (manaNeeded + card.manaCost <= availableLands.length) {
-        manaNeeded += card.manaCost;
-        chosenCards.push(card);
-      }
-    }
-
-    let manaGenerated = 0;
-    for (const card of newBattlefield) {
-      if (card.type === "land" && !card.tapped && manaGenerated < manaNeeded) {
-        card.tapped = true;
-        manaGenerated++;
-      }
-    }
-
-    setOpponentMana(manaGenerated);
-    logMessage(`🔥 Opponent taps ${manaGenerated} land${manaGenerated !== 1 ? 's' : ''} for mana.`);
-
-    const newGraveyard = [];
-    const newLog = [];
-    let mana = manaGenerated;
-    const updatedHand = [];
-
-    for (const card of opponentHand) {
-      if (chosenCards.includes(card) && mana >= card.manaCost) {
-        mana -= card.manaCost;
-
-        if (card.type === "creature") {
-          newBattlefield.push({
-            ...card,
-            tapped: false,
-            blocking: null,
-            damageTaken: 0,
-          });
-          newLog.push(`👺 Opponent summons ${card.name} (${card.attack}/${card.defense}).`);
-        } else if (card.type === "spell") {
-          setPlayerLife(prev => Math.max(0, prev - 3));
-          newGraveyard.push(card);
-          newLog.push(`⚡ Opponent casts ${card.name} for 3 damage!`);
-        }
-      } else {
-        updatedHand.push(card);
-      }
-    }
-
-    setOpponentMana(mana);
-    setOpponentHand(updatedHand);
-    setGraveyard(prev => [...prev, ...newGraveyard]);
-    setOpponentBattlefield(newBattlefield);
-    newLog.forEach(logMessage);
-
-    const untappedDefenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
-    if (untappedDefenders.length === 0) {
-      const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
-      attackers.forEach(card => {
-        setPlayerLife(prev => Math.max(0, prev - card.attack));
-        logMessage(`💥 ${card.name} attacks you for ${card.attack} damage.`);
-        card.tapped = true;
-      });
-      setOpponentBattlefield([...newBattlefield]);
-    } else {
-      logMessage(`🛡️ Opponent holds back due to your defenders.`);
-    }
-
-    currentTurn.current = "player";
-    setTimeout(() => {
-      setTurnCount(prev => prev + 1);
-      setIsPlayerTurn(true);
-      hasStartedTurn.current = false;
-      isRunningCPU.current = false;
-    }, 300);
-  }
-
-  function declareAttacker(cardId) {
-    if (!isPlayerTurn) return;
-
-    let message = null;
-
-    const newState = playerBattlefield.map(card => {
-      if (card.id !== cardId || card.type !== "creature") return card;
-
-      if (card.attacking) {
-        message = `↩️ ${card.name} attack canceled.`;
-        return { ...card, attacking: false, tapped: false };
-      }
-
-      if (card.tapped) {
-        message = `🚫 ${card.name} is tapped and cannot attack.`;
-        return card;
-      }
-
-      message = `⚔️ ${card.name} declared as attacker.`;
-      return { ...card, attacking: true, tapped: true };
-    });
-
-    setPlayerBattlefield(newState);
-    if (message) logMessage(message);
-  }
-
-  function resolveCombat() {
-    const updatedPlayer = [...playerBattlefield];
-    const updatedOpponent = [...opponentBattlefield];
-
-    const attackers = updatedPlayer.filter(c => c.attacking);
-    const blockers = updatedOpponent.filter(c => c.type === "creature" && !c.tapped);
-    const grave = [];
-
-    attackers.forEach(attacker => {
-      const blocker = blockers.shift();
-      if (blocker) {
-        attacker.damageTaken = blocker.attack;
-        blocker.damageTaken = attacker.attack;
-        blocker.tapped = true;
-        blocker.blocking = attacker.id;
-
-        if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
-        if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
-
-        logMessage(`🛡️ ${blocker.name} blocked ${attacker.name}.`);
-      } else {
-        setOpponentLife(hp => Math.max(0, hp - attacker.attack));
-        logMessage(`💥 ${attacker.name} hits opponent for ${attacker.attack} damage.`);
-      }
-    });
-
-    const remainingPlayer = updatedPlayer.filter(c => !grave.includes(c));
-    const remainingOpponent = updatedOpponent.filter(c => !grave.includes(c));
-
-    setPlayerBattlefield(
-      remainingPlayer.map(c => ({
-        ...c,
-        attacking: false,
-        tapped: c.tapped || c.attacking,
-      }))
-    );
-    setOpponentBattlefield(
-      remainingOpponent.map(c => ({ ...c, blocking: null }))
-    );
-    setGraveyard(prev => [...prev, ...grave]);
   }
 
   return (
@@ -309,10 +124,10 @@ export function GameProvider({ children }) {
         manaPool,
         playedLand,
         isPlayerTurn,
-        playCard,
-        endTurn,
-        declareAttacker,
-        resolveCombat,
+        playCard: handlePlayCard,
+        endTurn: handleEndTurn,
+        declareAttacker: handleDeclareAttacker,
+        resolveCombat: handleResolveCombat,
         setPlayerBattlefield,
         setManaPool,
         log,
