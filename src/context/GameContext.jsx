@@ -8,7 +8,6 @@ import { runOpponentTurn } from "./OpponentAI";
 const GameContext = createContext();
 
 export function GameProvider({ children }) {
-  // ✅ Persist shuffled decks using useRef
   const playerDeckRef = useRef([...sampleDeck].sort(() => 0.5 - Math.random()));
   const opponentDeckRef = useRef([...sampleDeck].sort(() => 0.5 - Math.random()));
 
@@ -17,7 +16,6 @@ export function GameProvider({ children }) {
 
   const initialHand = playerDeck.slice(0, 7);
   const initialLibrary = playerDeck.slice(7);
-
   const initialOpponentHand = opponentDeck.slice(0, 7);
   const initialOpponentLibrary = opponentDeck.slice(7);
 
@@ -28,8 +26,19 @@ export function GameProvider({ children }) {
   const [playerBattlefield, setPlayerBattlefield] = useState([]);
   const [opponentBattlefield, setOpponentBattlefield] = useState([]);
 
-  const [playerLife, setPlayerLife] = useState(20);
-  const [opponentLife, setOpponentLife] = useState(20);
+  const [playerLife, setPlayerLifeState] = useState(20);
+  const [opponentLife, setOpponentLifeState] = useState(20);
+
+  const playerLifeRef = useRef(playerLife);
+  const opponentLifeRef = useRef(opponentLife);
+
+  useEffect(() => {
+    playerLifeRef.current = playerLife;
+  }, [playerLife]);
+
+  useEffect(() => {
+    opponentLifeRef.current = opponentLife;
+  }, [opponentLife]);
 
   const [manaPool, setManaPool] = useState(0);
   const [playedLand, setPlayedLand] = useState(false);
@@ -43,26 +52,26 @@ export function GameProvider({ children }) {
   const [opponentPlayedLand, setOpponentPlayedLand] = useState(false);
 
   const [selectedTarget, setSelectedTarget] = useState(null);
-
   const [blockingPhase, setBlockingPhase] = useState(false);
   const [declaredAttackers, setDeclaredAttackers] = useState([]);
   const [blockAssignments, setBlockAssignments] = useState({});
 
   const [log, setLog] = useState([]);
-  function logMessage(msg) {
-    setLog(prev => [...prev, msg]);
-  }
+  const logMessage = (msg) => setLog(prev => [...prev, msg]);
+
+  const [gameOver, setGameOver] = useState(false);
+  const [gameResult, setGameResult] = useState(null);
 
   const currentTurn = useRef("player");
   const hasStartedTurn = useRef(false);
   const isRunningCPU = useRef(false);
 
   useEffect(() => {
-    if (currentTurn.current === "player" && turnCount > 1 && !hasStartedTurn.current) {
+    if (currentTurn.current === "player" && turnCount > 1 && !hasStartedTurn.current && !gameOver) {
       hasStartedTurn.current = true;
       startTurn(getStateForActions());
     }
-  }, [turnCount]);
+  }, [turnCount, gameOver]);
 
   function getStateForActions() {
     return {
@@ -76,17 +85,44 @@ export function GameProvider({ children }) {
       playedLand,
       setPlayedLand,
       setLog,
-      setOpponentLife,
+      setOpponentLife: (valOrFn) => {
+        setOpponentLifeState(prev => {
+          const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
+          opponentLifeRef.current = next;
+          setTimeout(() => {
+            if (next <= 0) {
+              setLog(prev => [...prev, "🏆 You win! Game over."]);
+              setGameOver(true);
+              setGameResult("win");
+            }
+          }, 0);
+          return next;
+        });
+      },
+      setPlayerLife: (valOrFn) => {
+        setPlayerLifeState(prev => {
+          const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
+          playerLifeRef.current = next;
+          setTimeout(() => {
+            if (next <= 0) {
+              setLog(prev => [...prev, "💀 You lose! Game over."]);
+              setGameOver(true);
+              setGameResult("loss");
+            }
+          }, 0);
+          return next;
+        });
+      },
+      playerLife,
+      opponentLife,
       isPlayerTurn,
       playerBattlefield,
       opponentBattlefield,
       setOpponentHand,
       setOpponentMana,
-      setPlayerLife,
       setOpponentPlayedLand,
       opponentHand,
       opponentPlayedLand,
-      setGraveyard,
       setLibrary,
       setHasDrawnCard,
       library,
@@ -109,27 +145,63 @@ export function GameProvider({ children }) {
   }
 
   function handlePlayCard(card) {
-    playCard(card, getStateForActions());
+    if (!gameOver) playCard(card, getStateForActions());
   }
 
   function handleDeclareAttacker(cardId) {
-    declareAttacker(cardId, getStateForActions());
+    if (!gameOver) declareAttacker(cardId, getStateForActions());
   }
 
   function handleResolveCombat() {
-    resolveCombat(getStateForActions());
+    if (!gameOver) resolveCombat(getStateForActions());
   }
 
   function handleEndTurn() {
+    if (gameOver) return;
     currentTurn.current = "opponent";
     setIsPlayerTurn(false);
-
     setTimeout(() => {
       if (!isRunningCPU.current) {
         isRunningCPU.current = true;
         runOpponentTurn(getStateForActions());
       }
     }, 300);
+  }
+
+  function restartGame() {
+    const newPlayerDeck = [...sampleDeck].sort(() => 0.5 - Math.random());
+    const newOpponentDeck = [...sampleDeck].sort(() => 0.5 - Math.random());
+
+    playerDeckRef.current = newPlayerDeck;
+    opponentDeckRef.current = newOpponentDeck;
+
+    setHand(newPlayerDeck.slice(0, 7));
+    setLibrary(newPlayerDeck.slice(7));
+    setOpponentHand(newOpponentDeck.slice(0, 7));
+    setOpponentLibrary(newOpponentDeck.slice(7));
+
+    setPlayerBattlefield([]);
+    setOpponentBattlefield([]);
+    setGraveyard([]);
+    setManaPool(0);
+    setPlayedLand(false);
+    setHasDrawnCard(false);
+    setIsPlayerTurn(true);
+    setTurnCount(1);
+    setPlayerLifeState(20);
+    setOpponentLifeState(20);
+    setOpponentMana(0);
+    setOpponentPlayedLand(false);
+    setSelectedTarget(null);
+    setBlockingPhase(false);
+    setDeclaredAttackers([]);
+    setBlockAssignments({});
+    setLog([]);
+    currentTurn.current = "player";
+    hasStartedTurn.current = false;
+    isRunningCPU.current = false;
+    setGameOver(false);
+    setGameResult(null);
   }
 
   return (
@@ -163,6 +235,9 @@ export function GameProvider({ children }) {
         setDeclaredAttackers,
         blockAssignments,
         setBlockAssignments,
+        gameOver,
+        gameResult,
+        restartGame,
       }}
     >
       {children}
