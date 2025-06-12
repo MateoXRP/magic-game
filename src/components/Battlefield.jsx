@@ -10,7 +10,7 @@ export default function Battlefield() {
 
   function handleClick(cardName, cardType, cardId) {
     if (cardType === "creature") {
-      declareAttacker(cardId);
+      declareAttacker(cardId); // ✅ Always call to allow toggling
       return;
     }
 
@@ -45,7 +45,7 @@ export default function Battlefield() {
     }, {});
 
   function renderCard(card, count = 1, tappedCount = 0) {
-    const isTappable = card.type === "land" ? tappedCount < count : !card.tapped;
+    const isTappable = card.type === "land" ? tappedCount < count : true;
 
     return (
       <div

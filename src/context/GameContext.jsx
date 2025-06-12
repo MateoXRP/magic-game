@@ -32,7 +32,7 @@ export function GameProvider({ children }) {
 
   useEffect(() => {
     if (isPlayerTurn && turnCount > 1) {
-      startTurn(); // only draw after first turn
+      startTurn();
     }
   }, [isPlayerTurn]);
 
@@ -81,7 +81,6 @@ export function GameProvider({ children }) {
   }
 
   function startTurn() {
-    // 💥 Mana burn
     if (manaPool > 0) {
       setPlayerLife(prev => Math.max(0, prev - manaPool));
       logMessage(`🔥 You took ${manaPool} mana burn damage!`);
@@ -128,13 +127,14 @@ export function GameProvider({ children }) {
 
     setPlayerBattlefield(prev =>
       prev.map(card => {
-        if (
-          card.id === cardId &&
-          card.type === "creature" &&
-          !card.tapped
-        ) {
-          logMessage(`⚔️ ${card.name} declared as attacker.`);
-          return { ...card, attacking: true, tapped: true };
+        if (card.id === cardId && card.type === "creature") {
+          if (!card.attacking && !card.tapped) {
+            logMessage(`⚔️ ${card.name} declared as attacker.`);
+            return { ...card, attacking: true, tapped: true };
+          } else if (card.attacking) {
+            logMessage(`↩️ ${card.name} attack canceled.`);
+            return { ...card, attacking: false };
+          }
         }
         return card;
       })
