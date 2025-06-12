@@ -9,50 +9,91 @@ export default function Battlefield() {
   } = useGame();
 
   function handleClick(cardId) {
-    const card = playerBattlefield.find(c => c.id === cardId);
+    setPlayerBattlefield(prevBattlefield => {
+      const updated = prevBattlefield.map(card => {
+        if (card.id === cardId && !card.tapped) {
+          if (card.type === "land") {
+            setManaPool(prev => prev + 1);
+            return { ...card, tapped: true };
+          }
+          if (card.type === "creature") {
+            declareAttacker(cardId);
+          }
+        }
+        return card;
+      });
+      return updated;
+    });
+  }
 
-    if (!card || card.tapped) return;
+  const creatures = playerBattlefield.filter(c => c.type === "creature");
+  const lands = playerBattlefield.filter(c => c.type === "land");
 
-    if (card.type === "land") {
-      const updated = playerBattlefield.map(c =>
-        c.id === cardId ? { ...c, tapped: true } : c
-      );
-      setPlayerBattlefield(updated);
-      setManaPool(prev => prev + 1);
-    }
-
-    if (card.type === "creature") {
-      declareAttacker(cardId);
-    }
+  function renderCard(card) {
+    return (
+      <div
+        key={card.id}
+        onClick={() => handleClick(card.id)}
+        className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
+          ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}
+          ${card.attacking ? "border-red-500 border-4" : ""}`}
+      >
+        <div className="text-2xl">{getCardEmoji(card)}</div>
+        <div className="font-bold text-sm">{card.name}</div>
+        {card.type === "creature" && (
+          <div className="text-xs mt-1">{card.attack}/{card.defense}</div>
+        )}
+        {card.attacking && (
+          <div className="text-xs text-red-300">⚔️ Attacking</div>
+        )}
+        {card.tapped && card.type === "land" && (
+          <div className="text-xs italic">tapped</div>
+        )}
+      </div>
+    );
   }
 
   return (
     <div className="flex justify-center mt-4 px-2">
-      <div className="border border-gray-700 p-4 rounded w-full max-w-4xl overflow-y-auto min-h-[120px]">
+      <div className="border border-gray-700 p-4 rounded w-full max-w-4xl overflow-y-auto min-h-[180px]">
         <h2 className="text-lg font-bold mb-4 text-center">Your Battlefield</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 justify-items-center">
-          {playerBattlefield.map((card) => (
-            <div
-              key={card.id}
-              onClick={() => handleClick(card.id)}
-              className={`p-2 border rounded cursor-pointer text-center w-[100px] h-[100px] ${
-                card.tapped ? "bg-gray-500" : "bg-green-700"
-              } ${card.attacking ? "border-red-500 border-4" : ""}`}
-            >
-              <div className="font-bold">{card.name}</div>
-              {card.type === "creature" && (
-                <div>{card.attack}/{card.defense}</div>
-              )}
-              {card.attacking && (
-                <div className="text-sm text-red-300">⚔️ Attacking</div>
-              )}
-              {card.tapped && !card.attacking && (
-                <div className="text-xs italic">tapped</div>
-              )}
+        <div className="space-y-4">
+          {creatures.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-4">
+              {creatures.map(renderCard)}
             </div>
-          ))}
+          )}
+          {lands.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-4">
+              {lands.map(renderCard)}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+function getCardColor(color) {
+  switch (color) {
+    case "red":
+      return "bg-red-700 text-white";
+    case "blue":
+      return "bg-blue-700 text-white";
+    case "green":
+      return "bg-green-700 text-white";
+    case "white":
+      return "bg-yellow-200 text-black";
+    case "black":
+      return "bg-gray-800 text-white";
+    default:
+      return "bg-gray-600 text-white";
+  }
+}
+
+function getCardEmoji(card) {
+  if (card.name === "Mountain") return "⛰️";
+  if (card.name === "Goblin") return "👺";
+  if (card.name === "Lightning Bolt") return "⚡";
+  return "🎴";
 }

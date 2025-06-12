@@ -9,14 +9,39 @@ export default function Hand() {
         <div
           key={card.id}
           onClick={() => playCard(card)}
-          className="p-2 border rounded bg-gray-800 cursor-pointer hover:bg-gray-700"
+          className={`p-2 border rounded cursor-pointer hover:brightness-110 w-[100px] h-[120px] text-center flex flex-col justify-center ${getCardColor(card.color)}`}
         >
-          <div className="font-bold">{card.name}</div>
+          <div className="text-2xl">{getCardEmoji(card)}</div>
+          <div className="font-bold text-sm">{card.name}</div>
           {card.type !== "land" && (
-            <div>Cost: {card.manaCost} 🔥</div>
+            <div className="text-xs mt-1">Cost: {card.manaCost} 🔥</div>
           )}
         </div>
       ))}
     </div>
   );
+}
+
+function getCardColor(color) {
+  switch (color) {
+    case "red":
+      return "bg-red-700 text-white";
+    case "blue":
+      return "bg-blue-700 text-white";
+    case "green":
+      return "bg-green-700 text-white";
+    case "white":
+      return "bg-yellow-200 text-black";
+    case "black":
+      return "bg-gray-800 text-white";
+    default:
+      return "bg-gray-600 text-white";
+  }
+}
+
+function getCardEmoji(card) {
+  if (card.name === "Mountain") return "⛰️";
+  if (card.name === "Goblin") return "👺";
+  if (card.name === "Lightning Bolt") return "⚡";
+  return "🎴";
 }

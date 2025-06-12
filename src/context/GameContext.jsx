@@ -39,14 +39,11 @@ export function GameProvider({ children }) {
     if (!isInHand) return;
 
     if (card.type === "land") {
-      if (playedLand) {
-        alert("You already played a land this turn.");
-        return;
-      }
+      if (playedLand) return;
 
-      setPlayerBattlefield([...playerBattlefield, { ...card, tapped: false }]);
-      setHand(hand.filter(c => c.id !== card.id));
       setPlayedLand(true);
+      setPlayerBattlefield(prev => [...prev, { ...card, tapped: false }]);
+      setHand(prev => prev.filter(c => c.id !== card.id));
       logMessage(`🪨 Played ${card.name}.`);
       return;
     }
@@ -57,11 +54,11 @@ export function GameProvider({ children }) {
       }
 
       setManaPool(prev => prev - card.manaCost);
-      setHand(hand.filter(c => c.id !== card.id));
+      setHand(prev => prev.filter(c => c.id !== card.id));
 
       if (card.type === "creature") {
-        setPlayerBattlefield([
-          ...playerBattlefield,
+        setPlayerBattlefield(prev => [
+          ...prev,
           {
             ...card,
             tapped: false,
@@ -72,7 +69,7 @@ export function GameProvider({ children }) {
         ]);
         logMessage(`🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`);
       } else if (card.type === "spell") {
-        setGraveyard([...graveyard, card]);
+        setGraveyard(prev => [...prev, card]);
         setOpponentLife(hp => hp - 3);
         logMessage(`💥 Lightning Bolt deals 3 damage to opponent.`);
       }
