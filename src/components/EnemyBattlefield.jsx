@@ -64,7 +64,7 @@ export default function EnemyBattlefield() {
               >
                 <div className="text-2xl">{getCardEmoji(card)}</div>
                 <div className="font-bold text-sm">{card.name}</div>
-                <div className="text-xs mt-1">{card.attack}/{card.defense}</div>
+                <div className="text-xs mt-1">{getEffectiveAttack(card, opponentBattlefield)}/{card.defense}</div>
                 {card.tapped && <div className="text-xs italic">tapped</div>}
               </div>
             );
@@ -94,7 +94,17 @@ function getCardColor(color) {
 
 function getCardEmoji(card) {
   if (card.name === "Mountain") return "⛰️";
-  if (card.name === "Goblin") return "👺";
+  if (card.name === "Goblin" || card.name === "Goblin Chief") return "👺";
   if (card.name === "Lightning Bolt") return "⚡";
   return "🎴";
+}
+
+function getEffectiveAttack(card, battlefield) {
+  const hasChief = battlefield.some(
+    c => c.name === "Goblin Chief" && c.id !== card.id
+  );
+  if (hasChief && card.name === "Goblin") {
+    return card.attack + 1;
+  }
+  return card.attack;
 }

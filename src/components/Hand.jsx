@@ -41,7 +41,7 @@ function getCardColor(color) {
 
 function getCardEmoji(card) {
   if (card.name === "Mountain") return "⛰️";
-  if (card.name === "Goblin") return "👺";
+  if (card.name === "Goblin" || card.name === "Goblin Chief") return "👺";
   if (card.name === "Lightning Bolt") return "⚡";
   return "🎴";
 }

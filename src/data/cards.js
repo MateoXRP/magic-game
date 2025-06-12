@@ -14,6 +14,16 @@ export const sampleDeck = [
     attack: 1,
     defense: 1,
   })),
+  ...Array(5).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Goblin Chief",
+    color: "red",
+    manaCost: 2,
+    attack: 2,
+    defense: 2,
+    special: "All other Goblins get +1 attack while this is in play.",
+  })),
   ...Array(10).fill(null).map(() => ({
     id: crypto.randomUUID(),
     type: "spell",

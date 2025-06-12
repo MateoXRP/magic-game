@@ -1,4 +1,5 @@
 // src/context/PlayerActions.js
+
 export function playCard(card, state) {
   const {
     isPlayerTurn,
@@ -51,7 +52,11 @@ export function playCard(card, state) {
           damageTaken: 0,
         },
       ]);
-      setLog(prev => [...prev, `🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`]);
+      setLog(prev => [
+        ...prev,
+        `🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`,
+        card.special ? `✨ ${card.name} — ${card.special}` : null,
+      ].filter(Boolean));
     } else if (card.type === "spell") {
       setGraveyard(prev => [...prev, card]);
 
@@ -138,46 +143,60 @@ export function resolveCombat(state) {
   const grave = [];
 
   if (blockingPhase) {
-    // 🔁 Resolve CPU attacks vs player blockers
     declaredAttackers.forEach(attackerId => {
       const attacker = updatedOpponent.find(c => c.id === attackerId);
       if (!attacker) return;
 
       const blockerId = blockAssignments[attackerId];
-      if (blockerId) {
-        const blocker = updatedPlayer.find(c => c.id === blockerId);
-        if (!blocker) return;
+      const blocker = blockerId ? updatedPlayer.find(c => c.id === blockerId) : null;
 
-        attacker.damageTaken = blocker.attack;
-        blocker.damageTaken = attacker.attack;
+      if (blockerId && blocker) {
+        let attackerPower = attacker.attack;
+        let blockerPower = blocker.attack;
 
-        setLog(prev => [
-          ...prev,
-          `🛡️ ${blocker.name} blocks ${attacker.name}.`,
-        ]);
+        if (attacker.name === "Goblin" &&
+            updatedOpponent.some(c => c.name === "Goblin Chief" && c.id !== attacker.id)) {
+          attackerPower += 1;
+        }
+        if (blocker.name === "Goblin" &&
+            updatedPlayer.some(c => c.name === "Goblin Chief" && c.id !== blocker.id)) {
+          blockerPower += 1;
+        }
+
+        attacker.damageTaken = blockerPower;
+        blocker.damageTaken = attackerPower;
+
+        setLog(prev => [...prev, `🛡️ ${blocker.name} blocks ${attacker.name}.`]);
 
         if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
         if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
       } else {
-        setPlayerLife(prev => Math.max(0, prev - attacker.attack));
-        setLog(prev => [
-          ...prev,
-          `💥 ${attacker.name} hits you for ${attacker.attack} damage.`,
-        ]);
+        setLog(prev => [...prev, `⚰️ ${attacker.name} was blocked, but blocker is gone.`]);
       }
 
       attacker.tapped = true;
     });
   } else {
-    // 🔁 Resolve player attacks vs CPU
     const attackers = updatedPlayer.filter(c => c.attacking);
     const blockers = updatedOpponent.filter(c => c.type === "creature" && !c.tapped);
 
     attackers.forEach(attacker => {
       const blocker = blockers.shift();
       if (blocker) {
-        attacker.damageTaken = blocker.attack;
-        blocker.damageTaken = attacker.attack;
+        let attackerPower = attacker.attack;
+        let blockerPower = blocker.attack;
+
+        if (attacker.name === "Goblin" &&
+            updatedPlayer.some(c => c.name === "Goblin Chief" && c.id !== attacker.id)) {
+          attackerPower += 1;
+        }
+        if (blocker.name === "Goblin" &&
+            updatedOpponent.some(c => c.name === "Goblin Chief" && c.id !== blocker.id)) {
+          blockerPower += 1;
+        }
+
+        attacker.damageTaken = blockerPower;
+        blocker.damageTaken = attackerPower;
         blocker.tapped = true;
         blocker.blocking = attacker.id;
 
@@ -219,6 +238,16 @@ export function resolveCombat(state) {
     setBlockingPhase(false);
     setDeclaredAttackers([]);
     setBlockAssignments({});
+
+    if (state.currentTurn.current === "opponent") {
+      setTimeout(() => {
+        state.setTurnCount(prev => prev + 1);
+        state.setIsPlayerTurn(true);
+        state.hasStartedTurn.current = false;
+        state.isRunningCPU.current = false;
+        state.currentTurn.current = "player";
+      }, 300);
+    }
   }
 }
 

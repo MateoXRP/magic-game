@@ -1,4 +1,5 @@
 import { useGame } from "../context/GameContext";
+import { useState, useEffect } from "react";
 
 export default function Battlefield() {
   const {
@@ -14,6 +15,11 @@ export default function Battlefield() {
   } = useGame();
 
   const [selectedBlocker, setSelectedBlocker] = useState(null);
+
+  // ✅ Reset blue border after combat resolves
+  useEffect(() => {
+    if (!blockingPhase) setSelectedBlocker(null);
+  }, [blockingPhase]);
 
   function handleClick(cardName, cardType, cardId) {
     if (blockingPhase) {
@@ -71,6 +77,7 @@ export default function Battlefield() {
     const isTappable = card.type === "land" ? tappedCount < count : true;
     const isSelected = card.id === selectedBlocker;
     const isAssigned = Object.values(blockAssignments).includes(card.id);
+    const isFullyTapped = tappedCount >= count;
 
     let border = "border-gray-500";
     if (isSelected) border = "border-blue-400 border-4";
@@ -83,12 +90,16 @@ export default function Battlefield() {
         onClick={() => isTappable && handleClick(card.name, card.type, card.id)}
         className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
           ${border}
-          ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}`}
+          ${(card.type === "creature" && card.tapped) || (card.type === "land" && isFullyTapped)
+            ? "bg-gray-500 text-white"
+            : getCardColor(card.color)}`}
       >
         <div className="text-2xl">{getCardEmoji(card)}</div>
         <div className="font-bold text-sm">{card.name}</div>
         {card.type === "creature" && (
-          <div className="text-xs mt-1">{card.attack}/{card.defense}</div>
+          <div className="text-xs mt-1">
+            {getEffectiveAttack(card, playerBattlefield)}/{card.defense}
+          </div>
         )}
         {card.type === "land" && count > 1 && (
           <div className="text-xs mt-1">{count - tappedCount}</div>
@@ -96,7 +107,7 @@ export default function Battlefield() {
         {card.attacking && (
           <div className="text-xs text-red-300">⚔️ Attacking</div>
         )}
-        {card.tapped && card.type === "land" && (
+        {isFullyTapped && card.type === "land" && (
           <div className="text-xs italic">all tapped</div>
         )}
         {card.tapped && card.type === "creature" && (
@@ -135,7 +146,9 @@ export default function Battlefield() {
                   >
                     <div className="text-2xl">{getCardEmoji(attacker)}</div>
                     <div className="font-bold text-sm">{attacker.name}</div>
-                    <div className="text-xs mt-1">{attacker.attack}/{attacker.defense}</div>
+                    <div className="text-xs mt-1">
+                      {getEffectiveAttack(attacker, opponentBattlefield)}/{attacker.defense}
+                    </div>
                   </div>
                 );
               })}
@@ -146,8 +159,6 @@ export default function Battlefield() {
     </div>
   );
 }
-
-import { useState } from "react";
 
 function getCardColor(color) {
   switch (color) {
@@ -168,7 +179,17 @@ function getCardColor(color) {
 
 function getCardEmoji(card) {
   if (card.name === "Mountain") return "⛰️";
-  if (card.name === "Goblin") return "👺";
+  if (card.name === "Goblin" || card.name === "Goblin Chief") return "👺";
   if (card.name === "Lightning Bolt") return "⚡";
   return "🎴";
+}
+
+function getEffectiveAttack(card, battlefield) {
+  const hasChief = battlefield.some(
+    c => c.name === "Goblin Chief" && c.id !== card.id
+  );
+  if (hasChief && card.name === "Goblin") {
+    return card.attack + 1;
+  }
+  return card.attack;
 }
