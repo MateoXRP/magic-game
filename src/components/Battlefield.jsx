@@ -9,21 +9,23 @@ export default function Battlefield() {
   } = useGame();
 
   function handleClick(cardId) {
-    setPlayerBattlefield(prevBattlefield => {
-      const updated = prevBattlefield.map(card => {
-        if (card.id === cardId && !card.tapped) {
-          if (card.type === "land") {
-            setManaPool(prev => prev + 1);
-            return { ...card, tapped: true };
-          }
-          if (card.type === "creature") {
-            declareAttacker(cardId);
-          }
-        }
-        return card;
-      });
-      return updated;
-    });
+    const card = playerBattlefield.find(c => c.id === cardId);
+
+    if (!card || card.tapped) return;
+
+    if (card.type === "land") {
+      setPlayerBattlefield(prev =>
+        prev.map(c =>
+          c.id === cardId ? { ...c, tapped: true } : c
+        )
+      );
+      setManaPool(prev => prev + 1);
+      return;
+    }
+
+    if (card.type === "creature") {
+      declareAttacker(cardId);
+    }
   }
 
   const creatures = playerBattlefield.filter(c => c.type === "creature");

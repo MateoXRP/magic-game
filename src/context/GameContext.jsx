@@ -6,8 +6,11 @@ const GameContext = createContext();
 export function GameProvider({ children }) {
   const shuffledDeck = [...sampleDeck].sort(() => 0.5 - Math.random());
 
-  const [library, setLibrary] = useState(shuffledDeck);
-  const [hand, setHand] = useState(shuffledDeck.slice(0, 7));
+  const initialHand = shuffledDeck.slice(0, 7);
+  const initialLibrary = shuffledDeck.slice(7);
+
+  const [hand, setHand] = useState(initialHand);
+  const [library, setLibrary] = useState(initialLibrary);
   const [graveyard, setGraveyard] = useState([]);
 
   const [playerBattlefield, setPlayerBattlefield] = useState([]);
@@ -20,6 +23,7 @@ export function GameProvider({ children }) {
   const [playedLand, setPlayedLand] = useState(false);
   const [hasDrawnCard, setHasDrawnCard] = useState(false);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
+  const [turnCount, setTurnCount] = useState(1);
 
   const [log, setLog] = useState([]);
   function logMessage(msg) {
@@ -27,8 +31,8 @@ export function GameProvider({ children }) {
   }
 
   useEffect(() => {
-    if (isPlayerTurn) {
-      startTurn();
+    if (isPlayerTurn && turnCount > 1) {
+      startTurn(); // only draw after first turn
     }
   }, [isPlayerTurn]);
 
@@ -106,6 +110,7 @@ export function GameProvider({ children }) {
             : c
         )
       );
+      setTurnCount(prev => prev + 1);
       setIsPlayerTurn(true);
     }, 1000);
   }
