@@ -129,14 +129,14 @@ export function GameProvider({ children }) {
       prev.map(card => {
         if (card.id !== cardId || card.type !== "creature") return card;
 
-        if (card.attacking) {
-          logMessage(`↩️ ${card.name} attack canceled.`);
-          return { ...card, attacking: false };
+        if (card.tapped && !card.attacking) {
+          logMessage(`🚫 ${card.name} is tapped and cannot attack.`);
+          return card;
         }
 
-        if (card.tapped) {
-          logMessage(`⚔️ ${card.name} reselected as attacker.`);
-          return { ...card, attacking: true };
+        if (card.attacking) {
+          logMessage(`↩️ ${card.name} attack canceled.`);
+          return { ...card, attacking: false, tapped: false };
         }
 
         logMessage(`⚔️ ${card.name} declared as attacker.`);
@@ -180,8 +180,16 @@ export function GameProvider({ children }) {
     const remainingPlayer = updatedPlayer.filter(c => !grave.includes(c));
     const remainingOpponent = updatedOpponent.filter(c => !grave.includes(c));
 
-    setPlayerBattlefield(remainingPlayer.map(c => ({ ...c, attacking: false })));
-    setOpponentBattlefield(remainingOpponent.map(c => ({ ...c, blocking: null })));
+    setPlayerBattlefield(
+      remainingPlayer.map(c => ({
+        ...c,
+        attacking: false,
+        tapped: c.tapped || c.attacking,
+      }))
+    );
+    setOpponentBattlefield(
+      remainingOpponent.map(c => ({ ...c, blocking: null }))
+    );
     setGraveyard(prev => [...prev, ...grave]);
   }
 

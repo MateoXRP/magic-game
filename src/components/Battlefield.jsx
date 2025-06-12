@@ -10,7 +10,7 @@ export default function Battlefield() {
 
   function handleClick(cardName, cardType, cardId) {
     if (cardType === "creature") {
-      declareAttacker(cardId); // ✅ Always call to allow toggling
+      declareAttacker(cardId);
       return;
     }
 
@@ -34,7 +34,6 @@ export default function Battlefield() {
 
   const creatures = playerBattlefield.filter(c => c.type === "creature");
 
-  // Group lands by name
   const landGroups = playerBattlefield
     .filter(c => c.type === "land")
     .reduce((acc, card) => {
@@ -52,7 +51,7 @@ export default function Battlefield() {
         key={card.id + (count > 1 ? `-${count}` : "")}
         onClick={() => isTappable && handleClick(card.name, card.type, card.id)}
         className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
-          ${!isTappable ? "bg-gray-500 text-white" : getCardColor(card.color)}
+          ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}
           ${card.attacking ? "border-red-500 border-4" : ""}`}
       >
         <div className="text-2xl">{getCardEmoji(card)}</div>
@@ -66,8 +65,11 @@ export default function Battlefield() {
         {card.attacking && (
           <div className="text-xs text-red-300">⚔️ Attacking</div>
         )}
-        {!isTappable && card.type === "land" && (
+        {card.tapped && card.type === "land" && (
           <div className="text-xs italic">all tapped</div>
+        )}
+        {card.tapped && card.type === "creature" && (
+          <div className="text-xs italic text-white">tapped</div>
         )}
       </div>
     );
