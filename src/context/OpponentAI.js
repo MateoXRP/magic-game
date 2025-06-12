@@ -9,9 +9,8 @@ export function runOpponentTurn(state) {
   } = state;
 
   setLog(prev => [...prev, `🤖 Opponent's turn begins.`]);
-  setOpponentPlayedLand(false); // reset land play flag
+  setOpponentPlayedLand(false);
 
-  // ✅ Untap all lands/creatures and remove temporary buffs
   const untappedBattlefield = opponentBattlefield.map(c => {
     if (c.type === "creature" && c.boosted) {
       return {
@@ -22,17 +21,14 @@ export function runOpponentTurn(state) {
         boosted: false,
       };
     }
-
     if (c.type === "land" || c.type === "creature") {
       return { ...c, tapped: false };
     }
-
     return c;
   });
 
   setOpponentBattlefield(untappedBattlefield);
 
-  // ✅ Delay before starting actual decisions
   setTimeout(() => {
     runOpponentTurnStep1({
       ...state,
@@ -103,6 +99,7 @@ function runOpponentTurnStep2(state) {
     setLog,
     setPlayerLife,
     playerBattlefield,
+    setPlayerBattlefield,
     setTurnCount,
     setIsPlayerTurn,
     currentTurn,
@@ -164,9 +161,38 @@ function runOpponentTurnStep2(state) {
         newLog.push(`👺 Opponent summons ${card.name} (${card.attack}/${card.defense}).`);
         if (card.special) newLog.push(`✨ ${card.name} — ${card.special}`);
       } else if (card.type === "spell") {
-        setPlayerLife(prev => Math.max(0, prev - card.damage ?? 3));
-        newGraveyard.push(card);
-        newLog.push(`⚡ Opponent casts ${card.name} for ${card.damage ?? 3} damage!`);
+        if (card.name === "Giant Growth") {
+          const target = newBattlefield.find(c => c.type === "creature" && !c.boosted);
+          if (target) {
+            target.attack += card.boost?.attack || 3;
+            target.defense += card.boost?.defense || 3;
+            target.boosted = true;
+            newLog.push(`🌿 Opponent casts ${card.name} on ${target.name}.`);
+          } else {
+            newLog.push(`🌿 Opponent tried to cast ${card.name}, but had no valid target.`);
+          }
+          newGraveyard.push(card);
+        } else if (card.name === "Lightning Bolt") {
+          const target = playerBattlefield.find(c => c.type === "creature" && c.defense <= card.damage);
+          if (target) {
+            const newDefense = target.defense - card.damage;
+            const updated = playerBattlefield.map(c =>
+              c.id === target.id ? { ...c, defense: newDefense } : c
+            );
+            const remaining = updated.filter(c => c.type !== "creature" || c.defense > 0);
+            setPlayerBattlefield(remaining);
+            newLog.push(`⚡ Opponent casts ${card.name} on ${target.name}, dealing ${card.damage} damage.`);
+            if (newDefense <= 0) newLog.push(`🔥 ${target.name} is destroyed.`);
+          } else {
+            setPlayerLife(prev => Math.max(0, prev - card.damage ?? 3));
+            newLog.push(`⚡ Opponent casts ${card.name} at you for ${card.damage} damage.`);
+          }
+          newGraveyard.push(card);
+        } else {
+          setPlayerLife(prev => Math.max(0, prev - card.damage ?? 3));
+          newGraveyard.push(card);
+          newLog.push(`⚡ Opponent casts ${card.name} for ${card.damage ?? 3} damage!`);
+        }
       }
     } else {
       newHand.push(card);
