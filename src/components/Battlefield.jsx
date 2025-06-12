@@ -1,7 +1,7 @@
 // src/components/Battlefield.jsx
 import { useGame } from "../context/GameContext";
 import { useState, useEffect } from "react";
-import { getCardColor, getEffectiveAttack } from "../utils";
+import Card from "./Card";
 
 export default function Battlefield() {
   const {
@@ -22,25 +22,21 @@ export default function Battlefield() {
     if (!blockingPhase) setSelectedBlocker(null);
   }, [blockingPhase]);
 
-  function handleClick(cardName, cardType, cardId, cardColor) {
+  function handleClick(card, count = 1, tappedCount = 0) {
     if (blockingPhase) {
-      const card = playerBattlefield.find(c => c.id === cardId);
-      if (card && !card.tapped && card.type === "creature") {
-        setSelectedBlocker(prev => (prev === cardId ? null : cardId));
+      if (!card.tapped && card.type === "creature") {
+        setSelectedBlocker(prev => (prev === card.id ? null : card.id));
       }
       return;
     }
 
-    if (cardType === "creature") {
-      declareAttacker(cardId);
-      return;
-    }
-
-    if (cardType === "land") {
+    if (card.type === "creature") {
+      declareAttacker(card.id);
+    } else if (card.type === "land") {
       let tapped = false;
 
       const updated = playerBattlefield.map(c => {
-        if (!tapped && c.type === "land" && c.name === cardName && !c.tapped) {
+        if (!tapped && c.type === "land" && c.name === card.name && !c.tapped) {
           tapped = true;
           return { ...c, tapped: true };
         }
@@ -51,7 +47,7 @@ export default function Battlefield() {
         setPlayerBattlefield(updated);
         setManaPool(prev => ({
           ...prev,
-          [cardColor]: (prev[cardColor] || 0) + 1,
+          [card.color]: (prev[card.color] || 0) + 1,
         }));
       }
     }
@@ -77,63 +73,41 @@ export default function Battlefield() {
       return acc;
     }, {});
 
-  function renderCard(card, count = 1, tappedCount = 0) {
-    const isTappable = card.type === "land" ? tappedCount < count : true;
-    const isSelected = card.id === selectedBlocker;
-    const isAssigned = Object.values(blockAssignments).includes(card.id);
-    const isFullyTapped = tappedCount >= count;
-
-    let border = "border-gray-500";
-    if (isSelected) border = "border-blue-400 border-4";
-    else if (isAssigned) border = "border-green-400 border-4";
-    else if (card.attacking) border = "border-red-500 border-4";
-
-    return (
-      <div
-        key={card.id + (count > 1 ? `-${count}` : "")}
-        onClick={() => isTappable && handleClick(card.name, card.type, card.id, card.color)}
-        className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
-          ${border}
-          ${(card.type === "creature" && card.tapped) || (card.type === "land" && isFullyTapped)
-            ? "bg-gray-500 text-white"
-            : getCardColor(card.color)}`}
-      >
-        <div className="text-2xl">{card.emoji}</div>
-        <div className="font-bold text-sm">{card.name}</div>
-        {card.type === "creature" && (
-          <div className="text-xs mt-1">
-            {getEffectiveAttack(card, playerBattlefield)}/{card.defense}
-          </div>
-        )}
-        {card.type === "land" && count > 1 && (
-          <div className="text-xs mt-1">{count - tappedCount}</div>
-        )}
-        {card.attacking && (
-          <div className="text-xs text-red-300">⚔️ Attacking</div>
-        )}
-        {isFullyTapped && card.type === "land" && (
-          <div className="text-xs italic">all tapped</div>
-        )}
-        {card.tapped && card.type === "creature" && (
-          <div className="text-xs italic text-white">tapped</div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className="flex justify-center mt-4 px-2">
       <div className="border border-gray-700 p-4 rounded w-full max-w-4xl overflow-y-auto min-h-[180px]">
         <h2 className="text-lg font-bold mb-4 text-center">Your Battlefield</h2>
         <div className="flex flex-wrap justify-center gap-4">
+          {/* Grouped lands */}
           {Object.entries(landGroups).map(([name, group]) => {
-            const first = group[0];
             const tappedCount = group.filter(c => c.tapped).length;
-            return renderCard(first, group.length, tappedCount);
+            return (
+              <Card
+                key={`${group[0].id}-group`}
+                card={group[0]}
+                onClick={() => handleClick(group[0], group.length, tappedCount)}
+                groupedCount={group.length}
+                tappedCount={tappedCount}
+              />
+            );
           })}
-          {creatures.map(renderCard)}
+
+          {/* Creatures */}
+          {creatures.map(card => (
+            <Card
+              key={card.id}
+              card={card}
+              onClick={() => handleClick(card)}
+              battlefield={playerBattlefield}
+              isSelected={selectedBlocker === card.id}
+              isAssigned={Object.values(blockAssignments).includes(card.id)}
+              isAttacking={card.attacking}
+              label={card.tapped && !card.attacking ? "tapped" : ""}
+            />
+          ))}
         </div>
 
+        {/* Blocker assignment UI */}
         {blockingPhase && selectedBlocker && (
           <>
             <h3 className="text-sm mt-4 font-semibold text-blue-300 text-center">Choose enemy to block:</h3>
@@ -142,18 +116,14 @@ export default function Battlefield() {
                 const attacker = opponentBattlefield.find(c => c.id === attackerId);
                 if (!attacker) return null;
                 return (
-                  <div
+                  <Card
                     key={attacker.id}
+                    card={attacker}
                     onClick={() => assignBlock(attacker.id)}
-                    className={`p-2 border border-yellow-400 rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
-                      ${attacker.tapped ? "bg-gray-500 text-white" : getCardColor(attacker.color)}`}
-                  >
-                    <div className="text-2xl">{attacker.emoji}</div>
-                    <div className="font-bold text-sm">{attacker.name}</div>
-                    <div className="text-xs mt-1">
-                      {getEffectiveAttack(attacker, opponentBattlefield)}/{attacker.defense}
-                    </div>
-                  </div>
+                    isTargetable
+                    battlefield={opponentBattlefield}
+                    label={attacker.tapped ? "tapped" : ""}
+                  />
                 );
               })}
             </div>
