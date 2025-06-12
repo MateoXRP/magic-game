@@ -1,5 +1,7 @@
 // src/context/PlayerActions.js
 
+import { resolveCombatPhase } from "../engine/combatEngine";
+
 export function playCard(card, state) {
   const {
     isPlayerTurn,
@@ -42,11 +44,9 @@ export function playCard(card, state) {
     return alert(`You need at least 1 ${card.color} mana and ${cost} total mana to play this card.`);
   }
 
-  // Spend 1 of the card's color
   const newMana = { ...manaPool, [card.color]: manaPool[card.color] - 1 };
   let remaining = cost - 1;
 
-  // Spend remaining cost from any pool
   for (const color of ["red", "green"]) {
     while (remaining > 0 && newMana[color] > 0) {
       newMana[color]--;
@@ -156,129 +156,7 @@ export function declareAttacker(cardId, state) {
 }
 
 export function resolveCombat(state) {
-  const {
-    playerBattlefield,
-    opponentBattlefield,
-    setPlayerBattlefield,
-    setOpponentBattlefield,
-    setGraveyard,
-    setOpponentLife,
-    setPlayerLife,
-    setLog,
-    blockingPhase,
-    setBlockingPhase,
-    declaredAttackers,
-    setDeclaredAttackers,
-    blockAssignments,
-    setBlockAssignments,
-  } = state;
-
-  const updatedPlayer = [...playerBattlefield];
-  const updatedOpponent = [...opponentBattlefield];
-  const grave = [];
-
-  const getEffectivePower = (card, battlefield) => {
-    if (card.name === "Goblin" &&
-        battlefield.some(c => c.name === "Goblin Chief" && c.id !== card.id)) {
-      return card.attack + 1;
-    }
-    return card.attack;
-  };
-
-  if (blockingPhase) {
-    declaredAttackers.forEach(attackerId => {
-      const attacker = updatedOpponent.find(c => c.id === attackerId);
-      if (!attacker) return;
-
-      const blockerId = blockAssignments[attackerId];
-      const blocker = blockerId ? updatedPlayer.find(c => c.id === blockerId) : null;
-
-      if (blockerId && blocker) {
-        const attackerPower = getEffectivePower(attacker, updatedOpponent);
-        const blockerPower = getEffectivePower(blocker, updatedPlayer);
-
-        attacker.damageTaken = blockerPower;
-        blocker.damageTaken = attackerPower;
-
-        setLog(prev => [...prev, `🛡️ ${blocker.name} blocks ${attacker.name}.`]);
-
-        if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
-        if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
-      } else if (blockerId) {
-        setLog(prev => [...prev, `⚰️ ${attacker.name} was blocked, but blocker is gone.`]);
-      } else {
-        const damage = getEffectivePower(attacker, updatedOpponent);
-        setPlayerLife(hp => Math.max(0, hp - damage));
-        setLog(prev => [...prev, `💥 ${attacker.name} hits you for ${damage} damage.`]);
-      }
-
-      attacker.tapped = true;
-    });
-  } else {
-    const attackers = updatedPlayer.filter(c => c.attacking);
-    const blockers = updatedOpponent.filter(c => c.type === "creature" && !c.tapped);
-
-    attackers.forEach(attacker => {
-      const blocker = blockers.shift();
-      if (blocker) {
-        const attackerPower = getEffectivePower(attacker, updatedPlayer);
-        const blockerPower = getEffectivePower(blocker, updatedOpponent);
-
-        attacker.damageTaken = blockerPower;
-        blocker.damageTaken = attackerPower;
-        blocker.tapped = true;
-        blocker.blocking = attacker.id;
-
-        if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
-        if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
-
-        setLog(prev => [...prev, `🛡️ ${blocker.name} blocked ${attacker.name}.`]);
-      } else {
-        const damage = getEffectivePower(attacker, updatedPlayer);
-        setOpponentLife(hp => Math.max(0, hp - damage));
-        setLog(prev => [...prev, `💥 ${attacker.name} hits opponent for ${damage} damage.`]);
-      }
-    });
-  }
-
-  const remainingPlayer = updatedPlayer.filter(c => !grave.includes(c));
-  const remainingOpponent = updatedOpponent.filter(c => !grave.includes(c));
-
-  setPlayerBattlefield(
-    remainingPlayer.map(c => ({
-      ...c,
-      attacking: false,
-      tapped: c.tapped || c.attacking,
-      blocking: null,
-      damageTaken: 0,
-    }))
-  );
-
-  setOpponentBattlefield(
-    remainingOpponent.map(c => ({
-      ...c,
-      blocking: null,
-      damageTaken: 0,
-    }))
-  );
-
-  setGraveyard(prev => [...prev, ...grave]);
-
-  if (blockingPhase) {
-    setBlockingPhase(false);
-    setDeclaredAttackers([]);
-    setBlockAssignments({});
-
-    if (state.currentTurn.current === "opponent") {
-      setTimeout(() => {
-        state.setTurnCount(prev => prev + 1);
-        state.setIsPlayerTurn(true);
-        state.hasStartedTurn.current = false;
-        state.isRunningCPU.current = false;
-        state.currentTurn.current = "player";
-      }, 300);
-    }
-  }
+  resolveCombatPhase(state);
 }
 
 export function startTurn(state) {

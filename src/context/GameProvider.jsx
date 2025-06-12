@@ -135,7 +135,8 @@ export default function GameProvider({ children }) {
     setLog,
     setOpponentLife: (valOrFn) => {
       setOpponentLifeState(prev => {
-        const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
+        const safePrev = typeof prev === "number" ? prev : 20;
+        const next = typeof valOrFn === "function" ? valOrFn(safePrev) : valOrFn;
         opponentLifeRef.current = next;
         setTimeout(() => {
           if (next <= 0) {
@@ -149,7 +150,8 @@ export default function GameProvider({ children }) {
     },
     setPlayerLife: (valOrFn) => {
       setPlayerLifeState(prev => {
-        const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
+        const safePrev = typeof prev === "number" ? prev : 20;
+        const next = typeof valOrFn === "function" ? valOrFn(safePrev) : valOrFn;
         playerLifeRef.current = next;
         setTimeout(() => {
           if (next <= 0) {
