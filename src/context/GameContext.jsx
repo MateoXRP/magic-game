@@ -22,9 +22,10 @@ export function GameProvider({ children }) {
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
 
   useEffect(() => {
-    setPlayedLand(false);
-    setHasDrawnCard(false);
-  }, []);
+    if (isPlayerTurn) {
+      startTurn(); // ✅ Automatically start turn when it becomes player's
+    }
+  }, [isPlayerTurn]);
 
   function drawCard() {
     if (!isPlayerTurn) return;
@@ -84,8 +85,6 @@ export function GameProvider({ children }) {
   }
 
   function startTurn() {
-    if (!isPlayerTurn) return;
-
     setPlayerBattlefield(prev =>
       prev.map(c =>
         c.type === "land" || c.type === "creature"
@@ -95,6 +94,12 @@ export function GameProvider({ children }) {
     );
     setPlayedLand(false);
     setHasDrawnCard(false);
+
+    if (library.length > 0) {
+      setHand(prev => [...prev, library[0]]);
+      setLibrary(prev => prev.slice(1));
+      setHasDrawnCard(true);
+    }
   }
 
   function endTurn() {
@@ -109,7 +114,6 @@ export function GameProvider({ children }) {
         )
       );
       setIsPlayerTurn(true);
-      startTurn(); // ✅ Auto-untap next turn
     }, 1000);
   }
 
@@ -186,6 +190,8 @@ export function GameProvider({ children }) {
         endTurn,
         declareAttacker,
         resolveCombat,
+        setPlayerBattlefield,
+        setManaPool,
       }}
     >
       {children}
