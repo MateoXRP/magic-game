@@ -127,16 +127,20 @@ export function GameProvider({ children }) {
 
     setPlayerBattlefield(prev =>
       prev.map(card => {
-        if (card.id === cardId && card.type === "creature") {
-          if (!card.attacking && !card.tapped) {
-            logMessage(`⚔️ ${card.name} declared as attacker.`);
-            return { ...card, attacking: true, tapped: true };
-          } else if (card.attacking) {
-            logMessage(`↩️ ${card.name} attack canceled.`);
-            return { ...card, attacking: false };
-          }
+        if (card.id !== cardId || card.type !== "creature") return card;
+
+        if (card.attacking) {
+          logMessage(`↩️ ${card.name} attack canceled.`);
+          return { ...card, attacking: false };
         }
-        return card;
+
+        if (card.tapped) {
+          logMessage(`⚔️ ${card.name} reselected as attacker.`);
+          return { ...card, attacking: true };
+        }
+
+        logMessage(`⚔️ ${card.name} declared as attacker.`);
+        return { ...card, attacking: true, tapped: true };
       })
     );
   }
