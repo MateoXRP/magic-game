@@ -20,7 +20,11 @@ export function runOpponentTurn(state) {
 
   // ✅ Delay before starting actual decisions
   setTimeout(() => {
-    runOpponentTurnStep1({ ...state, opponentBattlefield: untappedBattlefield });
+    runOpponentTurnStep1({
+      ...state,
+      opponentBattlefield: untappedBattlefield,
+      opponentPlayedLand: false, // ✅ explicitly pass updated value
+    });
   }, 500);
 }
 
@@ -28,30 +32,52 @@ function runOpponentTurnStep1(state) {
   const {
     opponentBattlefield,
     opponentHand,
+    opponentLibrary,
     opponentPlayedLand,
     setOpponentBattlefield,
     setOpponentHand,
+    setOpponentLibrary,
     setOpponentPlayedLand,
     setLog,
   } = state;
 
   const battlefield = [...opponentBattlefield];
-  const hand = [...opponentHand];
+  let hand = [...opponentHand];
+
+  // ✅ Draw a card if library is not empty
+  if (opponentLibrary && opponentLibrary.length > 0) {
+    const drawnCard = opponentLibrary[0];
+    hand.push(drawnCard);
+    setOpponentHand(hand);
+    setOpponentLibrary(opponentLibrary.slice(1));
+    setLog(prev => [
+      ...prev,
+      `📅 Opponent draws ${drawnCard.name}. Hand now has ${hand.length} card(s).`
+    ]);
+  } else {
+    setLog(prev => [...prev, `❗ Opponent has no cards left to draw.`]);
+  }
 
   // ✅ Play a land if available
   const land = hand.find(c => c.type === "land");
   if (land && !opponentPlayedLand) {
     battlefield.push({ ...land, tapped: false });
-    setOpponentHand(prev => prev.filter(c => c.id !== land.id));
+    hand = hand.filter(c => c.id !== land.id);
+    setOpponentHand(hand);
     setOpponentPlayedLand(true);
-    setLog(prev => [...prev, `⛰️ Opponent plays a land.`]);
+    setLog(prev => [...prev, `⛰️ Opponent plays ${land.name}.`]);
+  } else {
+    setLog(prev => [
+      ...prev,
+      `🛑 No land played. opponentPlayedLand=${opponentPlayedLand}, land found=${!!land}`
+    ]);
   }
 
   setOpponentBattlefield(battlefield);
 
   // ✅ Delay before moving to tapping + spells
   setTimeout(() => {
-    runOpponentTurnStep2({ ...state, opponentBattlefield: battlefield });
+    runOpponentTurnStep2({ ...state, opponentBattlefield: battlefield, opponentHand: hand });
   }, 500);
 }
 
@@ -102,7 +128,10 @@ function runOpponentTurnStep2(state) {
   }
 
   setOpponentMana(manaGenerated);
-  setLog(prev => [...prev, `🔥 Opponent taps ${manaGenerated} land${manaGenerated !== 1 ? "s" : ""} for mana.`]);
+  setLog(prev => [
+    ...prev,
+    `🔥 Opponent taps ${manaGenerated} land${manaGenerated !== 1 ? "s" : ""} for mana.`
+  ]);
 
   const newBattlefield = [...battlefield];
   const newGraveyard = [];

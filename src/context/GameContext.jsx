@@ -8,11 +8,16 @@ import { runOpponentTurn } from "./OpponentAI";
 const GameContext = createContext();
 
 export function GameProvider({ children }) {
-  const shuffledDeck = [...sampleDeck].sort(() => 0.5 - Math.random());
-  const initialHand = shuffledDeck.slice(0, 7);
-  const initialLibrary = shuffledDeck.slice(7);
+  // ✅ Persist shuffled decks using useRef
+  const playerDeckRef = useRef([...sampleDeck].sort(() => 0.5 - Math.random()));
+  const opponentDeckRef = useRef([...sampleDeck].sort(() => 0.5 - Math.random()));
 
-  const opponentDeck = [...sampleDeck].sort(() => 0.5 - Math.random());
+  const playerDeck = playerDeckRef.current;
+  const opponentDeck = opponentDeckRef.current;
+
+  const initialHand = playerDeck.slice(0, 7);
+  const initialLibrary = playerDeck.slice(7);
+
   const initialOpponentHand = opponentDeck.slice(0, 7);
   const initialOpponentLibrary = opponentDeck.slice(7);
 
@@ -39,7 +44,6 @@ export function GameProvider({ children }) {
 
   const [selectedTarget, setSelectedTarget] = useState(null);
 
-  // ✅ Blocking system state
   const [blockingPhase, setBlockingPhase] = useState(false);
   const [declaredAttackers, setDeclaredAttackers] = useState([]);
   const [blockAssignments, setBlockAssignments] = useState({});
@@ -99,6 +103,8 @@ export function GameProvider({ children }) {
       setDeclaredAttackers,
       blockAssignments,
       setBlockAssignments,
+      opponentLibrary,
+      setOpponentLibrary,
     };
   }
 
