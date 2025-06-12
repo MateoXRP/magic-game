@@ -12,6 +12,7 @@ export default function Card({
   groupedCount = null,
   tappedCount = 0,
   label = "",
+  showCost = false,
 }) {
   const isFullyTapped =
     card.type === "land" ? tappedCount >= (groupedCount || 1) : card.tapped;
@@ -44,8 +45,8 @@ export default function Card({
         </div>
       )}
 
-      {/* Mana cost for all non-land cards */}
-      {card.type !== "land" && card.manaCost != null && (
+      {/* Mana cost shown only in hand */}
+      {showCost && card.type !== "land" && card.manaCost != null && (
         <div className="text-xs mt-1">Cost: {card.manaCost} {manaSymbol}</div>
       )}
 

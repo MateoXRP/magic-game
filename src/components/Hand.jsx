@@ -12,6 +12,7 @@ export default function Hand() {
           key={card.id}
           card={card}
           onClick={() => playCard(card)}
+          showCost={true}
         />
       ))}
     </div>
