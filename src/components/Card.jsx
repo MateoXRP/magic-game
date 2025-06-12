@@ -26,7 +26,9 @@ export default function Card({
   else if (isAttacking) borderClass = "border-red-500 border-4";
   else if (isTargetable) borderClass = "border-yellow-400 border-4";
 
-  const manaSymbol = card.color === "red" ? "🔥" : card.color === "green" ? "🌲" : "";
+  const manaSymbol =
+    card.color === "red" ? "🔥" :
+    card.color === "green" ? "🌲" : "";
 
   return (
     <div

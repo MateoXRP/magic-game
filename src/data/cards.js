@@ -1,3 +1,4 @@
+// src/data/cards.js
 export const sampleDeck = [
   // 🔴 RED LAND (8)
   ...Array(8).fill(null).map(() => ({
@@ -37,6 +38,7 @@ export const sampleDeck = [
     color: "red",
     manaCost: 1,
     damage: 3,
+    targetType: "opponent|opponent-creature", // 👈 NEW
     emoji: "⚡",
   })),
 
@@ -88,6 +90,7 @@ export const sampleDeck = [
     manaCost: 1,
     effect: "boost",
     boost: { attack: 3, defense: 3 },
+    targetType: "self-creature", // 👈 NEW
     emoji: "🌿",
   })),
 ];

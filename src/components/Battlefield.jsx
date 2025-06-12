@@ -2,8 +2,11 @@
 import { useGame } from "../context/GameContext";
 import { useState, useEffect } from "react";
 import Card from "./Card";
+import { isValidTarget } from "../utils";
+import { resolveSpell } from "../context/PlayerActions";
 
 export default function Battlefield() {
+  const game = useGame();
   const {
     playerBattlefield,
     setPlayerBattlefield,
@@ -14,7 +17,8 @@ export default function Battlefield() {
     opponentBattlefield,
     blockAssignments,
     setBlockAssignments,
-  } = useGame();
+    pendingSpell,
+  } = game;
 
   const [selectedBlocker, setSelectedBlocker] = useState(null);
 
@@ -23,6 +27,14 @@ export default function Battlefield() {
   }, [blockingPhase]);
 
   function handleClick(card, count = 1, tappedCount = 0) {
+    if (
+      pendingSpell &&
+      isValidTarget(card, pendingSpell.targetType, playerBattlefield, opponentBattlefield)
+    ) {
+      resolveSpell(card.id, game); // ✅ pass full context
+      return;
+    }
+
     if (blockingPhase) {
       if (!card.tapped && card.type === "creature") {
         setSelectedBlocker(prev => (prev === card.id ? null : card.id));
@@ -78,7 +90,6 @@ export default function Battlefield() {
       <div className="border border-gray-700 p-4 rounded w-full max-w-4xl overflow-y-auto min-h-[180px]">
         <h2 className="text-lg font-bold mb-4 text-center">Your Battlefield</h2>
         <div className="flex flex-wrap justify-center gap-4">
-          {/* Grouped lands */}
           {Object.entries(landGroups).map(([name, group]) => {
             const tappedCount = group.filter(c => c.tapped).length;
             return (
@@ -92,7 +103,6 @@ export default function Battlefield() {
             );
           })}
 
-          {/* Creatures */}
           {creatures.map(card => (
             <Card
               key={card.id}
@@ -102,12 +112,15 @@ export default function Battlefield() {
               isSelected={selectedBlocker === card.id}
               isAssigned={Object.values(blockAssignments).includes(card.id)}
               isAttacking={card.attacking}
+              isTargetable={
+                pendingSpell &&
+                isValidTarget(card, pendingSpell.targetType, playerBattlefield, opponentBattlefield)
+              }
               label={card.tapped && !card.attacking ? "tapped" : ""}
             />
           ))}
         </div>
 
-        {/* Blocker assignment UI */}
         {blockingPhase && selectedBlocker && (
           <>
             <h3 className="text-sm mt-4 font-semibold text-blue-300 text-center">Choose enemy to block:</h3>

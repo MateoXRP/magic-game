@@ -1,8 +1,5 @@
 // src/utils.js
 
-/**
- * Returns the Tailwind color class for a card based on its color.
- */
 export function getCardColor(color) {
     switch (color) {
       case "red":
@@ -20,15 +17,34 @@ export function getCardColor(color) {
     }
   }
   
-  /**
-   * Calculates effective attack value, applying buffs if relevant.
-   * Currently supports Goblin Chief's +1 buff to other Goblins.
-   */
   export function getEffectiveAttack(card, battlefield) {
     const hasChief =
       card.name === "Goblin" &&
       battlefield.some(c => c.name === "Goblin Chief" && c.id !== card.id);
   
     return hasChief ? card.attack + 1 : card.attack;
+  }
+  
+  /**
+   * Determine if a card is a valid target for a spell based on `targetType`
+   */
+  export function isValidTarget(card, targetType, playerBattlefield, opponentBattlefield) {
+    const isOpponent = opponentBattlefield.includes(card);
+    const isPlayer = playerBattlefield.includes(card);
+  
+    const types = targetType.split("|");
+  
+    return types.some(type => {
+      switch (type) {
+        case "opponent":
+          return isOpponent && card.type !== "creature";
+        case "opponent-creature":
+          return isOpponent && card.type === "creature";
+        case "self-creature":
+          return isPlayer && card.type === "creature";
+        default:
+          return false;
+      }
+    });
   }
   

@@ -44,6 +44,8 @@ export function getStateForActions(context) {
     setOpponentLibrary,
     setGameOver,
     setGameResult,
+    pendingSpell,
+    setPendingSpell,
   } = context;
 
   return {
@@ -89,6 +91,7 @@ export function getStateForActions(context) {
     setOpponentLibrary,
     setGameOver,
     setGameResult,
+    pendingSpell,
+    setPendingSpell,
   };
 }
-

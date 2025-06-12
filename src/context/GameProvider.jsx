@@ -44,6 +44,7 @@ export default function GameProvider({ children }) {
   const [opponentPlayedLand, setOpponentPlayedLand] = useState(false);
 
   const [selectedTarget, setSelectedTarget] = useState(null);
+  const [pendingSpell, setPendingSpell] = useState(null); // ✅ NEW
   const [blockingPhase, setBlockingPhase] = useState(false);
   const [declaredAttackers, setDeclaredAttackers] = useState([]);
   const [blockAssignments, setBlockAssignments] = useState({});
@@ -111,6 +112,7 @@ export default function GameProvider({ children }) {
     setOpponentMana(0);
     setOpponentPlayedLand(false);
     setSelectedTarget(null);
+    setPendingSpell(null); // ✅ reset on restart
     setBlockingPhase(false);
     setDeclaredAttackers([]);
     setBlockAssignments({});
@@ -183,6 +185,8 @@ export default function GameProvider({ children }) {
     isRunningCPU,
     selectedTarget,
     setSelectedTarget,
+    pendingSpell, // ✅
+    setPendingSpell, // ✅
     blockingPhase,
     setBlockingPhase,
     declaredAttackers,

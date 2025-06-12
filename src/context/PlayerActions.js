@@ -20,6 +20,8 @@ export function playCard(card, state) {
     selectedTarget,
     setSelectedTarget,
     playerBattlefield,
+    pendingSpell,
+    setPendingSpell,
   } = state;
 
   if (!isPlayerTurn) return;
@@ -74,57 +76,86 @@ export function playCard(card, state) {
       card.special ? `✨ ${card.name} — ${card.special}` : null,
     ].filter(Boolean));
   } else if (card.type === "spell") {
-    setGraveyard(prev => [...prev, card]);
+    if (card.targetType) {
+      setPendingSpell(card); // wait for user to select a target
+      setLog(prev => [...prev, `🎯 Select a target for ${card.name}.`]);
+    } else {
+      setGraveyard(prev => [...prev, card]);
+      setLog(prev => [...prev, `✨ ${card.name} resolves with no target.`]);
+    }
+  }
+}
 
-    if (card.name === "Giant Growth" && selectedTarget) {
-      const updated = playerBattlefield.map(c => {
-        if (c.id !== selectedTarget || c.type !== "creature") return c;
-        return {
-          ...c,
-          attack: c.attack + (card.boost?.attack || 3),
-          defense: c.defense + (card.boost?.defense || 3),
-          boosted: true,
-        };
+export function resolveSpell(targetId, state) {
+  const {
+    pendingSpell,
+    setPendingSpell,
+    setSelectedTarget,
+    setGraveyard,
+    setLog,
+    setOpponentBattlefield,
+    opponentBattlefield,
+    setPlayerBattlefield,
+    playerBattlefield,
+    setOpponentLife,
+  } = state;
+
+  if (!pendingSpell) return;
+
+  const card = pendingSpell;
+  setPendingSpell(null);
+  setSelectedTarget(null);
+  setGraveyard(prev => [...prev, card]);
+
+  if (card.name === "Giant Growth") {
+    const updated = playerBattlefield.map(c => {
+      if (c.id !== targetId || c.type !== "creature") return c;
+      return {
+        ...c,
+        attack: c.attack + (card.boost?.attack || 3),
+        defense: c.defense + (card.boost?.defense || 3),
+        boosted: true,
+      };
+    });
+
+    const target = playerBattlefield.find(c => c.id === targetId);
+    setPlayerBattlefield(updated);
+    setLog(prev => [
+      ...prev,
+      target
+        ? `🌿 ${card.name} boosts ${target.name} with +${card.boost.attack}/${card.boost.defense}.`
+        : `🌿 ${card.name} was cast, but target is gone.`,
+    ]);
+  } else if (card.name === "Lightning Bolt") {
+    if (targetId === "opponent") {
+      setOpponentLife(hp => Math.max(0, hp - card.damage));
+      setLog(prev => [...prev, `⚡ ${card.name} hits opponent for ${card.damage} damage.`]);
+    } else {
+      const target = opponentBattlefield.find(c => c.id === targetId);
+      if (!target || target.type !== "creature") {
+        setLog(prev => [...prev, `❌ Invalid target.`]);
+        return;
+      }
+
+      const newDefense = target.defense - card.damage;
+      const updated = opponentBattlefield.map(c => {
+        if (c.id !== targetId) return c;
+        return { ...c, defense: newDefense };
       });
 
-      const target = playerBattlefield.find(c => c.id === selectedTarget);
-      setPlayerBattlefield(updated);
+      // ✅ Fix: Only remove dead creatures, not all cards
+      const remaining = updated.filter(c =>
+        c.type !== "creature" || c.defense > 0
+      );
+
+      setOpponentBattlefield(remaining);
       setLog(prev => [
         ...prev,
-        target
-          ? `🌿 ${card.name} boosts ${target.name} with +${card.boost.attack}/${card.boost.defense}.`
-          : `🌿 ${card.name} was cast, but target is gone.`,
+        newDefense <= 0
+          ? `🔥 ${card.name} destroys ${target.name}.`
+          : `🔥 ${card.name} hits ${target.name} for ${card.damage} damage.`,
       ]);
-    } else if (card.damage) {
-      if (selectedTarget && selectedTarget !== "opponent") {
-        const updated = opponentBattlefield.map(c => {
-          if (c.id !== selectedTarget) return c;
-          if (c.type !== "creature") return c;
-          const newDef = c.defense - card.damage;
-          return { ...c, defense: newDef };
-        });
-
-        const target = opponentBattlefield.find(c => c.id === selectedTarget);
-        const updatedAfterKill = updated.filter(
-          c => c.type !== "creature" || c.defense > 0
-        );
-
-        setOpponentBattlefield(updatedAfterKill);
-        setLog(prev => [
-          ...prev,
-          target
-            ? (target.defense - card.damage <= 0
-              ? `🔥 ${card.name} destroys ${target.name}.`
-              : `🔥 ${card.name} hits ${target.name} for ${card.damage} damage.`)
-            : `🔥 ${card.name} was cast, but target is gone.`,
-        ]);
-      } else {
-        setOpponentLife(hp => Math.max(0, hp - card.damage));
-        setLog(prev => [...prev, `⚡ ${card.name} hits opponent for ${card.damage} damage.`]);
-      }
     }
-
-    setSelectedTarget(null);
   }
 }
 
