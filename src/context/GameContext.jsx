@@ -37,6 +37,8 @@ export function GameProvider({ children }) {
   const [opponentMana, setOpponentMana] = useState(0);
   const [opponentPlayedLand, setOpponentPlayedLand] = useState(false);
 
+  const [selectedTarget, setSelectedTarget] = useState(null); // ✅ NEW
+
   const [log, setLog] = useState([]);
   function logMessage(msg) {
     setLog(prev => [...prev, msg]);
@@ -84,6 +86,8 @@ export function GameProvider({ children }) {
       setIsPlayerTurn,
       hasStartedTurn,
       isRunningCPU,
+      selectedTarget,
+      setSelectedTarget, // ✅ NEW
     };
   }
 
@@ -134,6 +138,8 @@ export function GameProvider({ children }) {
         opponentHand,
         opponentLibrary,
         opponentMana,
+        selectedTarget,
+        setSelectedTarget, // ✅
       }}
     >
       {children}

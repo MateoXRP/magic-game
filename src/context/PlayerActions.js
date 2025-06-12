@@ -5,6 +5,7 @@ export function playCard(card, state) {
     hand,
     setHand,
     setPlayerBattlefield,
+    setOpponentBattlefield,
     setGraveyard,
     manaPool,
     setManaPool,
@@ -12,6 +13,9 @@ export function playCard(card, state) {
     setPlayedLand,
     setLog,
     setOpponentLife,
+    opponentBattlefield,
+    selectedTarget,
+    setSelectedTarget,
   } = state;
 
   if (!isPlayerTurn) return;
@@ -50,8 +54,38 @@ export function playCard(card, state) {
       setLog(prev => [...prev, `🧙 Summoned ${card.name} (${card.attack}/${card.defense}).`]);
     } else if (card.type === "spell") {
       setGraveyard(prev => [...prev, card]);
-      setOpponentLife(hp => hp - 3);
-      setLog(prev => [...prev, `💥 Lightning Bolt deals 3 damage to opponent.`]);
+
+      if (selectedTarget && selectedTarget !== "opponent") {
+        // Targeting a creature
+        const updated = opponentBattlefield.map(c => {
+          if (c.id !== selectedTarget) return c;
+          if (c.type !== "creature") return c;
+          const newDef = c.defense - card.damage;
+          return { ...c, defense: newDef };
+        });
+
+        const target = opponentBattlefield.find(c => c.id === selectedTarget);
+        const updatedAfterKill = updated.filter(
+          c => c.type !== "creature" || c.defense > 0
+        );
+
+        setOpponentBattlefield(updatedAfterKill);
+
+        setLog(prev => [
+          ...prev,
+          target
+            ? (target.defense - card.damage <= 0
+              ? `🔥 ${card.name} destroys ${target.name}.`
+              : `🔥 ${card.name} hits ${target.name} for ${card.damage} damage.`)
+            : `🔥 ${card.name} was cast, but target is gone.`,
+        ]);
+      } else {
+        // Targeting opponent directly
+        setOpponentLife(hp => Math.max(0, hp - card.damage));
+        setLog(prev => [...prev, `⚡ ${card.name} hits opponent for ${card.damage} damage.`]);
+      }
+
+      setSelectedTarget(null);
     }
   }
 }
@@ -173,4 +207,3 @@ export function startTurn(state) {
     setLog(prev => [...prev, `📅 Drew a card.`]);
   }
 }
-

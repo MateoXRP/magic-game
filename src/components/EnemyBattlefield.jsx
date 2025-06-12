@@ -1,16 +1,10 @@
-import { useState } from "react";
 import { useGame } from "../context/GameContext";
 
 export default function EnemyBattlefield() {
-  const { opponentBattlefield } = useGame();
-  const [selectedTargets, setSelectedTargets] = useState([]);
+  const { opponentBattlefield, selectedTarget, setSelectedTarget } = useGame();
 
   function toggleTarget(cardId) {
-    setSelectedTargets(prev =>
-      prev.includes(cardId)
-        ? prev.filter(id => id !== cardId)
-        : [...prev, cardId]
-    );
+    setSelectedTarget(prev => (prev === cardId ? null : cardId));
   }
 
   const creatures = opponentBattlefield.filter(c => c.type === "creature");
@@ -59,13 +53,13 @@ export default function EnemyBattlefield() {
 
           {/* Render individual creatures */}
           {creatures.map(card => {
-            const isSelected = selectedTargets.includes(card.id);
+            const isSelected = selectedTarget === card.id;
             return (
               <div
                 key={card.id}
                 onClick={() => toggleTarget(card.id)}
                 className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
-                  ${isSelected ? "border-red-500 border-4" : "border-gray-500"}
+                  ${isSelected ? "border-yellow-400 border-4" : "border-gray-500"}
                   ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}`}
               >
                 <div className="text-2xl">{getCardEmoji(card)}</div>
