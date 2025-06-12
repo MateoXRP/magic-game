@@ -8,18 +8,33 @@ export default function EnemyBattlefield() {
   function toggleTarget(cardId) {
     setSelectedTargets(prev =>
       prev.includes(cardId)
-        ? prev.filter(id => id !== cardId) // unselect
-        : [...prev, cardId] // select
+        ? prev.filter(id => id !== cardId)
+        : [...prev, cardId]
     );
   }
 
   const creatures = opponentBattlefield.filter(c => c.type === "creature");
+  const lands = opponentBattlefield.filter(c => c.type === "land");
 
   return (
     <div className="flex justify-center mt-4 px-2">
       <div className="border border-gray-700 p-4 rounded w-full max-w-4xl overflow-y-auto min-h-[120px]">
         <h2 className="text-lg font-bold mb-4 text-center">Enemy Battlefield</h2>
         <div className="flex flex-wrap justify-center gap-4">
+          {/* Render Lands */}
+          {lands.map(card => (
+            <div
+              key={card.id}
+              className={`p-2 border rounded w-[100px] h-[120px] text-center flex flex-col justify-center
+                ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}`}
+            >
+              <div className="text-2xl">{getCardEmoji(card)}</div>
+              <div className="font-bold text-sm">{card.name}</div>
+              {card.tapped && <div className="text-xs italic">tapped</div>}
+            </div>
+          ))}
+
+          {/* Render Creatures */}
           {creatures.map(card => {
             const isSelected = selectedTargets.includes(card.id);
             return (
@@ -33,9 +48,7 @@ export default function EnemyBattlefield() {
                 <div className="text-2xl">{getCardEmoji(card)}</div>
                 <div className="font-bold text-sm">{card.name}</div>
                 <div className="text-xs mt-1">{card.attack}/{card.defense}</div>
-                {card.tapped && (
-                  <div className="text-xs italic">tapped</div>
-                )}
+                {card.tapped && <div className="text-xs italic">tapped</div>}
               </div>
             );
           })}
@@ -68,4 +81,3 @@ function getCardEmoji(card) {
   if (card.name === "Lightning Bolt") return "⚡";
   return "🎴";
 }
-

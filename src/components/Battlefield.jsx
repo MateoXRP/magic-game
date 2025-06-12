@@ -45,13 +45,14 @@ export default function Battlefield() {
 
   function renderCard(card, count = 1, tappedCount = 0) {
     const isTappable = card.type === "land" ? tappedCount < count : true;
+    const isFullyTapped = card.type === "land" ? tappedCount >= count : card.tapped;
 
     return (
       <div
         key={card.id + (count > 1 ? `-${count}` : "")}
         onClick={() => isTappable && handleClick(card.name, card.type, card.id)}
         className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center
-          ${card.tapped ? "bg-gray-500 text-white" : getCardColor(card.color)}
+          ${isFullyTapped ? "bg-gray-500 text-white" : getCardColor(card.color)}
           ${card.attacking ? "border-red-500 border-4" : ""}`}
       >
         <div className="text-2xl">{getCardEmoji(card)}</div>
@@ -65,7 +66,7 @@ export default function Battlefield() {
         {card.attacking && (
           <div className="text-xs text-red-300">⚔️ Attacking</div>
         )}
-        {card.tapped && card.type === "land" && (
+        {isFullyTapped && card.type === "land" && (
           <div className="text-xs italic">all tapped</div>
         )}
         {card.tapped && card.type === "creature" && (
