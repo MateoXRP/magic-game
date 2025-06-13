@@ -83,8 +83,9 @@ export function playCard(card, state) {
     } else {
       // Spells with no targeting resolve instantly
       setGraveyard(prev => [...prev, card]);
+
       if (card.name === "Holy Water") {
-        setPlayerLife(prev => prev + (card.heal ?? 3));
+        setPlayerLife(life => life + (card.heal ?? 3));
         setLog(prev => [...prev, `💧 ${card.name} restores ${card.heal ?? 3} life.`]);
       } else if (card.name === "Pestilence") {
         const creatureCount = opponentBattlefield.filter(c => c.type === "creature").length;

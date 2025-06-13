@@ -9,31 +9,21 @@ export function runOpponentTurn(state) {
   } = state;
 
   setLog(prev => [...prev, `🤖 Opponent's turn begins.`]);
-  setOpponentPlayedLand(false);
+  setOpponentPlayedLand(false); // reset land play flag
 
-  const untappedBattlefield = opponentBattlefield.map(c => {
-    if (c.type === "creature" && c.boosted) {
-      return {
-        ...c,
-        attack: c.attack - 3,
-        defense: c.defense - 3,
-        tapped: false,
-        boosted: false,
-      };
-    }
-    if (c.type === "land" || c.type === "creature") {
-      return { ...c, tapped: false };
-    }
-    return c;
-  });
+  // ✅ Untap all lands/creatures first
+  const untappedBattlefield = opponentBattlefield.map(c =>
+    c.type === "land" || c.type === "creature" ? { ...c, tapped: false } : c
+  );
 
   setOpponentBattlefield(untappedBattlefield);
 
+  // ✅ Delay before starting actual decisions
   setTimeout(() => {
     runOpponentTurnStep1({
       ...state,
       opponentBattlefield: untappedBattlefield,
-      opponentPlayedLand: false,
+      opponentPlayedLand: false, // ✅ explicitly pass updated value
     });
   }, 500);
 }
@@ -54,6 +44,7 @@ function runOpponentTurnStep1(state) {
   const battlefield = [...opponentBattlefield];
   let hand = [...opponentHand];
 
+  // ✅ Draw a card if library is not empty
   if (opponentLibrary && opponentLibrary.length > 0) {
     const drawnCard = opponentLibrary[0];
     hand.push(drawnCard);
@@ -67,6 +58,7 @@ function runOpponentTurnStep1(state) {
     setLog(prev => [...prev, `❗ Opponent has no cards left to draw.`]);
   }
 
+  // ✅ Play a land if available
   const land = hand.find(c => c.type === "land");
   if (land && !opponentPlayedLand) {
     battlefield.push({ ...land, tapped: false });
@@ -83,6 +75,7 @@ function runOpponentTurnStep1(state) {
 
   setOpponentBattlefield(battlefield);
 
+  // ✅ Delay before moving to tapping + spells
   setTimeout(() => {
     runOpponentTurnStep2({ ...state, opponentBattlefield: battlefield, opponentHand: hand });
   }, 500);
@@ -99,7 +92,6 @@ function runOpponentTurnStep2(state) {
     setLog,
     setPlayerLife,
     playerBattlefield,
-    setPlayerBattlefield,
     setTurnCount,
     setIsPlayerTurn,
     currentTurn,
@@ -112,23 +104,35 @@ function runOpponentTurnStep2(state) {
   let battlefield = [...opponentBattlefield];
   let hand = [...opponentHand];
   const availableLands = battlefield.filter(c => c.type === "land" && !c.tapped);
+
+  const colorCounts = availableLands.reduce((acc, land) => {
+    acc[land.color] = (acc[land.color] || 0) + 1;
+    return acc;
+  }, {});
+
+  let usedColorCount = {};
+  let manaNeeded = 0;
+  const chosenCards = [];
+
   const playableCards = hand
     .filter(c => c.type === "creature" || c.type === "spell")
     .sort((a, b) => (a.type === "creature" ? -1 : 1));
 
-  let manaNeeded = 0;
-  const chosenCards = [];
-
   for (const card of playableCards) {
-    if (manaNeeded + card.manaCost <= availableLands.length) {
+    const color = card.color;
+    const colorAvailable = (colorCounts[color] || 0) - (usedColorCount[color] || 0);
+
+    if (colorAvailable >= 1 && manaNeeded + card.manaCost <= availableLands.length) {
+      usedColorCount[color] = (usedColorCount[color] || 0) + 1;
       manaNeeded += card.manaCost;
       chosenCards.push(card);
     }
   }
 
+  // ✅ Tap required number of lands
   let manaGenerated = 0;
   for (const land of battlefield) {
-    if (land.type === "land" && !land.tapped && manaGenerated < manaNeeded) {
+    if (!land.tapped && manaGenerated < manaNeeded) {
       land.tapped = true;
       manaGenerated++;
     }
@@ -161,38 +165,9 @@ function runOpponentTurnStep2(state) {
         newLog.push(`👺 Opponent summons ${card.name} (${card.attack}/${card.defense}).`);
         if (card.special) newLog.push(`✨ ${card.name} — ${card.special}`);
       } else if (card.type === "spell") {
-        if (card.name === "Giant Growth") {
-          const target = newBattlefield.find(c => c.type === "creature" && !c.boosted);
-          if (target) {
-            target.attack += card.boost?.attack || 3;
-            target.defense += card.boost?.defense || 3;
-            target.boosted = true;
-            newLog.push(`🌿 Opponent casts ${card.name} on ${target.name}.`);
-          } else {
-            newLog.push(`🌿 Opponent tried to cast ${card.name}, but had no valid target.`);
-          }
-          newGraveyard.push(card);
-        } else if (card.name === "Lightning Bolt") {
-          const target = playerBattlefield.find(c => c.type === "creature" && c.defense <= card.damage);
-          if (target) {
-            const newDefense = target.defense - card.damage;
-            const updated = playerBattlefield.map(c =>
-              c.id === target.id ? { ...c, defense: newDefense } : c
-            );
-            const remaining = updated.filter(c => c.type !== "creature" || c.defense > 0);
-            setPlayerBattlefield(remaining);
-            newLog.push(`⚡ Opponent casts ${card.name} on ${target.name}, dealing ${card.damage} damage.`);
-            if (newDefense <= 0) newLog.push(`🔥 ${target.name} is destroyed.`);
-          } else {
-            setPlayerLife(prev => Math.max(0, prev - card.damage ?? 3));
-            newLog.push(`⚡ Opponent casts ${card.name} at you for ${card.damage} damage.`);
-          }
-          newGraveyard.push(card);
-        } else {
-          setPlayerLife(prev => Math.max(0, prev - card.damage ?? 3));
-          newGraveyard.push(card);
-          newLog.push(`⚡ Opponent casts ${card.name} for ${card.damage ?? 3} damage!`);
-        }
+        setPlayerLife(prev => Math.max(0, prev - card.damage ?? 3));
+        newGraveyard.push(card);
+        newLog.push(`⚡ Opponent casts ${card.name} for ${card.damage ?? 3} damage!`);
       }
     } else {
       newHand.push(card);
@@ -204,6 +179,7 @@ function runOpponentTurnStep2(state) {
   setGraveyard(prev => [...prev, ...newGraveyard]);
   newLog.forEach(msg => setLog(prev => [...prev, msg]));
 
+  // ✅ Check for attackers
   const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
   const defenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
 
@@ -216,6 +192,7 @@ function runOpponentTurnStep2(state) {
     return;
   }
 
+  // ✅ No blockers: deal direct damage
   attackers.forEach(card => {
     setPlayerLife(prev => Math.max(0, prev - card.attack));
     setLog(prev => [...prev, `💥 ${card.name} attacks you for ${card.attack} damage.`]);
