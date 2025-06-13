@@ -9,17 +9,18 @@ import {
   whiteDeck,
   blackDeck,
 } from "../data/cards";
+import { createDualColorDeck } from "../data/deckBuilder";
 import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerActions";
 import { runOpponentTurn } from "./OpponentAI";
 import { getStateForActions } from "./getStateForActions";
 
-// 👇 Choose decks manually here
-const playerChosenDeck = blackDeck;
-const opponentChosenDeck = redDeck;
+// 🎯 Manually set two-color decks for player and opponent
+const playerDeckChoice = createDualColorDeck(blueDeck, whiteDeck);
+const opponentDeckChoice = createDualColorDeck(redDeck, greenDeck);
 
 export default function GameProvider({ children }) {
-  const playerDeckRef = useRef([...playerChosenDeck].sort(() => 0.5 - Math.random()));
-  const opponentDeckRef = useRef([...opponentChosenDeck].sort(() => 0.5 - Math.random()));
+  const playerDeckRef = useRef([...playerDeckChoice]);
+  const opponentDeckRef = useRef([...opponentDeckChoice]);
 
   const playerDeck = playerDeckRef.current;
   const opponentDeck = opponentDeckRef.current;
@@ -99,8 +100,8 @@ export default function GameProvider({ children }) {
   }
 
   function restartGame() {
-    const newPlayerDeck = [...playerChosenDeck].sort(() => 0.5 - Math.random());
-    const newOpponentDeck = [...opponentChosenDeck].sort(() => 0.5 - Math.random());
+    const newPlayerDeck = createDualColorDeck(blueDeck, whiteDeck);
+    const newOpponentDeck = createDualColorDeck(redDeck, greenDeck);
 
     playerDeckRef.current = newPlayerDeck;
     opponentDeckRef.current = newOpponentDeck;
@@ -113,7 +114,7 @@ export default function GameProvider({ children }) {
     setPlayerBattlefield([]);
     setOpponentBattlefield([]);
     setGraveyard([]);
-    setManaPool({ red: 0, green: 0 }); // expand later as needed
+    setManaPool({ red: 0, green: 0 });
     setPlayedLand(false);
     setHasDrawnCard(false);
     setIsPlayerTurn(true);
