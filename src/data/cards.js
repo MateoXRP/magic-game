@@ -1,6 +1,6 @@
 // src/data/cards.js
-export const sampleDeck = [
-  // 🔴 RED LAND (8)
+
+export const redDeck = [
   ...Array(8).fill(null).map(() => ({
     id: crypto.randomUUID(),
     type: "land",
@@ -9,8 +9,7 @@ export const sampleDeck = [
     emoji: "⛰️",
   })),
 
-  // 🔴 RED NONLAND (12)
-  ...Array(5).fill(null).map(() => ({
+  ...Array(4).fill(null).map(() => ({
     id: crypto.randomUUID(),
     type: "creature",
     name: "Goblin",
@@ -28,21 +27,33 @@ export const sampleDeck = [
     manaCost: 2,
     attack: 2,
     defense: 2,
-    special: "All other Goblins get +1 attack while this is in play.",
-    emoji: "👺",
+    special: "All Goblins get +1 attack while this is in play.",
+    emoji: "👑",
   })),
-  ...Array(4).fill(null).map(() => ({
+  ...Array(2).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "War Drummer",
+    color: "red",
+    manaCost: 3,
+    attack: 3,
+    defense: 3,
+    special: "All Goblin Chiefs get +1 attack while this is in play.",
+    emoji: "🥁",
+  })),
+  ...Array(3).fill(null).map(() => ({
     id: crypto.randomUUID(),
     type: "spell",
     name: "Lightning Bolt",
     color: "red",
     manaCost: 1,
     damage: 3,
-    targetType: "opponent|opponent-creature", // 👈 NEW
+    targetType: "opponent|opponent-creature",
     emoji: "⚡",
   })),
+];
 
-  // 🟢 GREEN LAND (8)
+export const greenDeck = [
   ...Array(8).fill(null).map(() => ({
     id: crypto.randomUUID(),
     type: "land",
@@ -51,7 +62,6 @@ export const sampleDeck = [
     emoji: "🌲",
   })),
 
-  // 🟢 GREEN NONLAND (12)
   ...Array(4).fill(null).map(() => ({
     id: crypto.randomUUID(),
     type: "creature",
@@ -70,6 +80,7 @@ export const sampleDeck = [
     manaCost: 2,
     attack: 2,
     defense: 2,
+    special: "All Elvish Scouts get +1 attack while this is in play.",
     emoji: "🐻",
   })),
   ...Array(2).fill(null).map(() => ({
@@ -80,6 +91,7 @@ export const sampleDeck = [
     manaCost: 3,
     attack: 3,
     defense: 3,
+    special: "All Forest Bears get +1 attack while this is in play.",
     emoji: "🌳",
   })),
   ...Array(3).fill(null).map(() => ({
@@ -90,7 +102,167 @@ export const sampleDeck = [
     manaCost: 1,
     effect: "boost",
     boost: { attack: 3, defense: 3 },
-    targetType: "self-creature", // 👈 NEW
+    targetType: "self-creature",
     emoji: "🌿",
+  })),
+];
+
+export const blueDeck = [
+  ...Array(8).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "land",
+    name: "Island",
+    color: "blue",
+    emoji: "🏝️",
+  })),
+
+  ...Array(4).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Merfolk Scout",
+    color: "blue",
+    manaCost: 1,
+    attack: 1,
+    defense: 1,
+    emoji: "🧜",
+  })),
+  ...Array(3).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Sea Serpent",
+    color: "blue",
+    manaCost: 2,
+    attack: 2,
+    defense: 2,
+    special: "All Merfolk Scouts get +1 defense while this is in play.",
+    emoji: "🐍",
+  })),
+  ...Array(2).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Ancient Leviathan",
+    color: "blue",
+    manaCost: 3,
+    attack: 3,
+    defense: 3,
+    special: "All Sea Serpents get +1 defense while this is in play.",
+    emoji: "🐋",
+  })),
+  ...Array(3).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "spell",
+    name: "Tsunami",
+    color: "blue",
+    manaCost: 1,
+    effect: "destroyLand",
+    targetType: "opponent-land",
+    emoji: "🌊",
+  })),
+];
+
+export const whiteDeck = [
+  ...Array(8).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "land",
+    name: "Plains",
+    color: "white",
+    emoji: "⛪",
+  })),
+
+  ...Array(4).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Soldier",
+    color: "white",
+    manaCost: 1,
+    attack: 1,
+    defense: 1,
+    emoji: "🪖",
+  })),
+  ...Array(3).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Knight",
+    color: "white",
+    manaCost: 2,
+    attack: 2,
+    defense: 2,
+    special: "All Soldiers get +1 defense while this is in play.",
+    emoji: "🤺",
+  })),
+  ...Array(2).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Paladin",
+    color: "white",
+    manaCost: 3,
+    attack: 3,
+    defense: 3,
+    special: "All Knights get +1 defense while this is in play.",
+    emoji: "🛡️",
+  })),
+  ...Array(3).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "spell",
+    name: "Holy Water",
+    color: "white",
+    manaCost: 1,
+    effect: "heal",
+    heal: 3,
+    targetType: null,
+    emoji: "💧",
+  })),
+];
+
+export const blackDeck = [
+  ...Array(8).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "land",
+    name: "Swamp",
+    color: "black",
+    emoji: "🕳️",
+  })),
+
+  ...Array(4).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Skeleton",
+    color: "black",
+    manaCost: 1,
+    attack: 1,
+    defense: 1,
+    emoji: "💀",
+  })),
+  ...Array(3).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Zombie",
+    color: "black",
+    manaCost: 2,
+    attack: 2,
+    defense: 2,
+    special: "All Skeletons get +1 attack while this is in play.",
+    emoji: "🧟",
+  })),
+  ...Array(2).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "creature",
+    name: "Dreadlord",
+    color: "black",
+    manaCost: 3,
+    attack: 3,
+    defense: 3,
+    special: "All Zombies get +1 attack while this is in play.",
+    emoji: "😈",
+  })),
+  ...Array(3).fill(null).map(() => ({
+    id: crypto.randomUUID(),
+    type: "spell",
+    name: "Pestilence",
+    color: "black",
+    manaCost: 1,
+    effect: "pestilence",
+    targetType: null,
+    emoji: "☠️",
   })),
 ];

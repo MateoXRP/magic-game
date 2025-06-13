@@ -1,5 +1,5 @@
 // src/components/Card.jsx
-import { getCardColor, getEffectiveAttack } from "../utils";
+import { getCardColor, getEffectiveAttack, getEffectiveDefense } from "../utils";
 
 export default function Card({
   card,
@@ -16,9 +16,11 @@ export default function Card({
 }) {
   const isFullyTapped =
     card.type === "land" ? tappedCount >= (groupedCount || 1) : card.tapped;
-  const effectiveAttack = card.type === "creature"
-    ? getEffectiveAttack(card, battlefield)
-    : null;
+
+  const effectiveAttack =
+    card.type === "creature" ? getEffectiveAttack(card, battlefield) : null;
+  const effectiveDefense =
+    card.type === "creature" ? getEffectiveDefense(card, battlefield) : null;
 
   let borderClass = "border-gray-500";
   if (isSelected) borderClass = "border-blue-400 border-4";
@@ -28,7 +30,11 @@ export default function Card({
 
   const manaSymbol =
     card.color === "red" ? "🔥" :
-    card.color === "green" ? "🌲" : "";
+    card.color === "green" ? "🌲" :
+    card.color === "blue" ? "💧" :
+    card.color === "white" ? "✨" :
+    card.color === "black" ? "💀" :
+    "";
 
   return (
     <div
@@ -43,7 +49,7 @@ export default function Card({
       {/* Creature stats */}
       {card.type === "creature" && (
         <div className="text-xs mt-1">
-          {effectiveAttack}/{card.defense}
+          {effectiveAttack}/{effectiveDefense}
         </div>
       )}
 

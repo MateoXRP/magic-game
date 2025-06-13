@@ -1,14 +1,25 @@
 // src/context/GameProvider.jsx
+
 import { useState, useEffect, useRef } from "react";
 import GameContext from "./GameContext";
-import { sampleDeck } from "../data/cards";
+import {
+  redDeck,
+  greenDeck,
+  blueDeck,
+  whiteDeck,
+  blackDeck,
+} from "../data/cards";
 import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerActions";
 import { runOpponentTurn } from "./OpponentAI";
 import { getStateForActions } from "./getStateForActions";
 
+// 👇 Choose decks manually here
+const playerChosenDeck = blueDeck;
+const opponentChosenDeck = redDeck;
+
 export default function GameProvider({ children }) {
-  const playerDeckRef = useRef([...sampleDeck].sort(() => 0.5 - Math.random()));
-  const opponentDeckRef = useRef([...sampleDeck].sort(() => 0.5 - Math.random()));
+  const playerDeckRef = useRef([...playerChosenDeck].sort(() => 0.5 - Math.random()));
+  const opponentDeckRef = useRef([...opponentChosenDeck].sort(() => 0.5 - Math.random()));
 
   const playerDeck = playerDeckRef.current;
   const opponentDeck = opponentDeckRef.current;
@@ -44,7 +55,7 @@ export default function GameProvider({ children }) {
   const [opponentPlayedLand, setOpponentPlayedLand] = useState(false);
 
   const [selectedTarget, setSelectedTarget] = useState(null);
-  const [pendingSpell, setPendingSpell] = useState(null); // ✅ NEW
+  const [pendingSpell, setPendingSpell] = useState(null);
   const [blockingPhase, setBlockingPhase] = useState(false);
   const [declaredAttackers, setDeclaredAttackers] = useState([]);
   const [blockAssignments, setBlockAssignments] = useState({});
@@ -88,8 +99,8 @@ export default function GameProvider({ children }) {
   }
 
   function restartGame() {
-    const newPlayerDeck = [...sampleDeck].sort(() => 0.5 - Math.random());
-    const newOpponentDeck = [...sampleDeck].sort(() => 0.5 - Math.random());
+    const newPlayerDeck = [...playerChosenDeck].sort(() => 0.5 - Math.random());
+    const newOpponentDeck = [...opponentChosenDeck].sort(() => 0.5 - Math.random());
 
     playerDeckRef.current = newPlayerDeck;
     opponentDeckRef.current = newOpponentDeck;
@@ -102,7 +113,7 @@ export default function GameProvider({ children }) {
     setPlayerBattlefield([]);
     setOpponentBattlefield([]);
     setGraveyard([]);
-    setManaPool({ red: 0, green: 0 });
+    setManaPool({ red: 0, green: 0 }); // expand later as needed
     setPlayedLand(false);
     setHasDrawnCard(false);
     setIsPlayerTurn(true);
@@ -112,7 +123,7 @@ export default function GameProvider({ children }) {
     setOpponentMana(0);
     setOpponentPlayedLand(false);
     setSelectedTarget(null);
-    setPendingSpell(null); // ✅ reset on restart
+    setPendingSpell(null);
     setBlockingPhase(false);
     setDeclaredAttackers([]);
     setBlockAssignments({});
@@ -185,8 +196,8 @@ export default function GameProvider({ children }) {
     isRunningCPU,
     selectedTarget,
     setSelectedTarget,
-    pendingSpell, // ✅
-    setPendingSpell, // ✅
+    pendingSpell,
+    setPendingSpell,
     blockingPhase,
     setBlockingPhase,
     declaredAttackers,

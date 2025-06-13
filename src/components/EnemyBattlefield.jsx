@@ -46,12 +46,19 @@ export default function EnemyBattlefield() {
         <div className="flex flex-wrap justify-center gap-4">
           {Object.entries(landGroups).map(([name, group]) => {
             const tappedCount = group.filter(c => c.tapped).length;
+            const firstLand = group[0];
+
             return (
               <Card
-                key={`${group[0].id}-group`}
-                card={group[0]}
+                key={`${firstLand.id}-group`}
+                card={firstLand}
                 groupedCount={group.length}
                 tappedCount={tappedCount}
+                onClick={() => handleClick(firstLand)}
+                isTargetable={
+                  pendingSpell &&
+                  isValidTarget(firstLand, pendingSpell.targetType, playerBattlefield, opponentBattlefield)
+                }
               />
             );
           })}

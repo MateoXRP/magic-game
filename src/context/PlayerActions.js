@@ -22,6 +22,7 @@ export function playCard(card, state) {
     playerBattlefield,
     pendingSpell,
     setPendingSpell,
+    setPlayerLife,
   } = state;
 
   if (!isPlayerTurn) return;
@@ -39,7 +40,7 @@ export function playCard(card, state) {
   }
 
   const cost = card.manaCost || 0;
-  const totalAvailable = (manaPool.red || 0) + (manaPool.green || 0);
+  const totalAvailable = Object.values(manaPool).reduce((a, b) => a + b, 0);
   const availableColor = manaPool[card.color] || 0;
 
   if (cost > totalAvailable || availableColor < 1) {
@@ -49,7 +50,7 @@ export function playCard(card, state) {
   const newMana = { ...manaPool, [card.color]: manaPool[card.color] - 1 };
   let remaining = cost - 1;
 
-  for (const color of ["red", "green"]) {
+  for (const color of Object.keys(manaPool)) {
     while (remaining > 0 && newMana[color] > 0) {
       newMana[color]--;
       remaining--;
@@ -80,8 +81,18 @@ export function playCard(card, state) {
       setPendingSpell(card); // wait for user to select a target
       setLog(prev => [...prev, `🎯 Select a target for ${card.name}.`]);
     } else {
+      // Spells with no targeting resolve instantly
       setGraveyard(prev => [...prev, card]);
-      setLog(prev => [...prev, `✨ ${card.name} resolves with no target.`]);
+      if (card.name === "Holy Water") {
+        setPlayerLife(prev => prev + (card.heal ?? 3));
+        setLog(prev => [...prev, `💧 ${card.name} restores ${card.heal ?? 3} life.`]);
+      } else if (card.name === "Pestilence") {
+        const creatureCount = opponentBattlefield.filter(c => c.type === "creature").length;
+        setOpponentLife(hp => Math.max(0, hp - creatureCount));
+        setLog(prev => [...prev, `☠️ ${card.name} deals ${creatureCount} damage to opponent.`]);
+      } else {
+        setLog(prev => [...prev, `✨ ${card.name} resolves with no target.`]);
+      }
     }
   }
 }
@@ -143,10 +154,7 @@ export function resolveSpell(targetId, state) {
         return { ...c, defense: newDefense };
       });
 
-      const remaining = updated.filter(c =>
-        c.type !== "creature" || c.defense > 0
-      );
-
+      const remaining = updated.filter(c => c.type !== "creature" || c.defense > 0);
       setOpponentBattlefield(remaining);
       setLog(prev => [
         ...prev,
@@ -155,6 +163,16 @@ export function resolveSpell(targetId, state) {
           : `🔥 ${card.name} hits ${target.name} for ${card.damage} damage.`,
       ]);
     }
+  } else if (card.name === "Tsunami") {
+    const target = opponentBattlefield.find(c => c.id === targetId);
+    if (!target || target.type !== "land") {
+      setLog(prev => [...prev, `❌ Invalid target for ${card.name}.`]);
+      return;
+    }
+
+    const remaining = opponentBattlefield.filter(c => c.id !== targetId);
+    setOpponentBattlefield(remaining);
+    setLog(prev => [...prev, `🌊 ${card.name} destroys opponent's ${target.name}.`]);
   }
 }
 
@@ -213,23 +231,11 @@ export function startTurn(state) {
 
   setPlayerBattlefield(prev =>
     prev.map(c =>
-      c.type === "creature" && c.boosted
-        ? {
-            ...c,
-            attack: c.attack - 3,
-            defense: c.defense - 3,
-            boosted: false,
-            tapped: false,
-            attacking: false,
-            blocking: null,
-            damageTaken: 0,
-          }
-        : c.type === "land" || c.type === "creature"
+      c.type === "land" || c.type === "creature"
         ? { ...c, tapped: false, attacking: false, blocking: null, damageTaken: 0 }
         : c
     )
   );
-
   setPlayedLand(false);
   setHasDrawnCard(false);
 
