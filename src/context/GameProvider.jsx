@@ -14,7 +14,7 @@ import { runOpponentTurn } from "./OpponentAI";
 import { getStateForActions } from "./getStateForActions";
 
 // 👇 Choose decks manually here
-const playerChosenDeck = blueDeck;
+const playerChosenDeck = blackDeck;
 const opponentChosenDeck = redDeck;
 
 export default function GameProvider({ children }) {
