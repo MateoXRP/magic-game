@@ -14,7 +14,7 @@ import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerAct
 import { runOpponentTurn } from "./OpponentAI";
 import { getStateForActions } from "./getStateForActions";
 
-// 🎯 Manually set two-color decks for player and opponent
+// 🎯 Default placeholder decks
 const playerDeckChoice = createDualColorDeck(blueDeck, whiteDeck);
 const opponentDeckChoice = createDualColorDeck(redDeck, greenDeck);
 
@@ -151,6 +151,32 @@ export default function GameProvider({ children }) {
     setOpponentHand([]);
     setOpponentLibrary([]);
     setPlayerColors([]);
+
+    setPlayerBattlefield([]);
+    setOpponentBattlefield([]);
+    setGraveyard([]);
+    setManaPool({ red: 0, green: 0, blue: 0, white: 0, black: 0 });
+
+    setPlayedLand(false);
+    setHasDrawnCard(false);
+    setSelectedTarget(null);
+    setPendingSpell(null);
+    setBlockingPhase(false);
+    setDeclaredAttackers([]);
+    setBlockAssignments({});
+    setLog([]);
+    setGameOver(false);
+    setGameResult(null);
+
+    setPlayerLifeState(20);
+    setOpponentLifeState(20);
+
+    // ✅ Final turn reset logic
+    setTurnCount(1);
+    setIsPlayerTurn(true);
+    currentTurn.current = "player";
+    hasStartedTurn.current = false;
+    isRunningCPU.current = false;
   }
 
   const contextValues = {
