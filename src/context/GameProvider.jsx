@@ -9,7 +9,7 @@ import {
   whiteDeck,
   blackDeck,
 } from "../data/cards";
-import { createDualColorDeck } from "../data/deckBuilder";
+import { createDualColorDeck } from "../data/deckbuilder";
 import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerActions";
 import { runOpponentTurn } from "./OpponentAI";
 import { getStateForActions } from "./getStateForActions";
