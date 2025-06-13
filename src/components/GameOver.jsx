@@ -2,8 +2,8 @@
 
 import { useGame } from "../context/GameContext";
 
-export default function GameOver() {
-  const { gameResult, restartGame } = useGame();
+export default function GameOver({ onRestart }) {
+  const { gameResult } = useGame();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[300px] text-center text-white p-8 bg-black bg-opacity-80 rounded shadow-lg">
@@ -12,7 +12,7 @@ export default function GameOver() {
       </h2>
       <p className="text-lg mb-6">Game Over</p>
       <button
-        onClick={restartGame}
+        onClick={onRestart}
         className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded text-white font-semibold"
       >
         🔁 Restart Game
@@ -20,4 +20,3 @@ export default function GameOver() {
     </div>
   );
 }
-

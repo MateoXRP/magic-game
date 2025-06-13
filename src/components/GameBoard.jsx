@@ -8,7 +8,7 @@ import EnemyBattlefield from "./EnemyBattlefield";
 import BattleLog from "./BattleLog";
 import GameOver from "./GameOver";
 
-export default function GameBoard() {
+export default function GameBoard({ onRestart }) {
   const { gameOver } = useGame();
 
   return (
@@ -19,13 +19,13 @@ export default function GameBoard() {
       </div>
 
       {gameOver ? (
-        // ✅ Show GameOver component
+        // Show GameOver screen
         <div className="flex justify-center items-center min-h-[400px]">
-          <GameOver />
+          <GameOver onRestart={onRestart} />
         </div>
       ) : (
         <div className="flex flex-col md:flex-row gap-4">
-          {/* LEFT SIDE: All game components */}
+          {/* LEFT SIDE: Main game components */}
           <div className="flex-1 space-y-4">
             <EnemyBattlefield />
             <Battlefield />

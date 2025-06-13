@@ -145,6 +145,14 @@ export default function GameProvider({ children }) {
     setGameResult(null);
   }
 
+  function resetGameState() {
+    setHand([]);
+    setLibrary([]);
+    setOpponentHand([]);
+    setOpponentLibrary([]);
+    setPlayerColors([]);
+  }
+
   const contextValues = {
     hand,
     setHand,
@@ -229,6 +237,7 @@ export default function GameProvider({ children }) {
     restartGame,
     playerColors,
     setPlayerColors,
+    resetGameState,
   };
 
   return (
