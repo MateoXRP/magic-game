@@ -11,7 +11,16 @@ export default function Controls() {
     playerLife,
     opponentLife,
     blockingPhase,
+    playerColors,
   } = useGame();
+
+  const colorEmojis = {
+    red: "🔥",
+    green: "🌲",
+    blue: "💧",
+    white: "✨",
+    black: "💀",
+  };
 
   return (
     <div className="flex justify-center mt-6">
@@ -40,9 +49,12 @@ export default function Controls() {
           </div>
         ) : null}
 
-        <div className="mt-2 text-white">
-          <span className="mr-4">🔥 Red: {manaPool.red}</span>
-          <span className="mr-4">🌲 Green: {manaPool.green}</span>
+        <div className="mt-2 text-white text-sm">
+          {playerColors.map(color => (
+            <span key={color} className="mr-4">
+              {colorEmojis[color]} {manaPool[color] || 0}
+            </span>
+          ))}
           <span className="mr-4">❤️ You: {playerLife}</span>
           <span>💀 Enemy: {opponentLife}</span>
         </div>

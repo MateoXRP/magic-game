@@ -9,21 +9,19 @@ export function runOpponentTurn(state) {
   } = state;
 
   setLog(prev => [...prev, `🤖 Opponent's turn begins.`]);
-  setOpponentPlayedLand(false); // reset land play flag
+  setOpponentPlayedLand(false);
 
-  // ✅ Untap all lands/creatures first
   const untappedBattlefield = opponentBattlefield.map(c =>
     c.type === "land" || c.type === "creature" ? { ...c, tapped: false } : c
   );
 
   setOpponentBattlefield(untappedBattlefield);
 
-  // ✅ Delay before starting actual decisions
   setTimeout(() => {
     runOpponentTurnStep1({
       ...state,
       opponentBattlefield: untappedBattlefield,
-      opponentPlayedLand: false, // ✅ explicitly pass updated value
+      opponentPlayedLand: false,
     });
   }, 500);
 }
@@ -44,7 +42,6 @@ function runOpponentTurnStep1(state) {
   const battlefield = [...opponentBattlefield];
   let hand = [...opponentHand];
 
-  // ✅ Draw a card if library is not empty
   if (opponentLibrary && opponentLibrary.length > 0) {
     const drawnCard = opponentLibrary[0];
     hand.push(drawnCard);
@@ -58,7 +55,6 @@ function runOpponentTurnStep1(state) {
     setLog(prev => [...prev, `❗ Opponent has no cards left to draw.`]);
   }
 
-  // ✅ Play a land if available
   const land = hand.find(c => c.type === "land");
   if (land && !opponentPlayedLand) {
     battlefield.push({ ...land, tapped: false });
@@ -75,7 +71,6 @@ function runOpponentTurnStep1(state) {
 
   setOpponentBattlefield(battlefield);
 
-  // ✅ Delay before moving to tapping + spells
   setTimeout(() => {
     runOpponentTurnStep2({ ...state, opponentBattlefield: battlefield, opponentHand: hand });
   }, 500);
@@ -91,6 +86,7 @@ function runOpponentTurnStep2(state) {
     setGraveyard,
     setLog,
     setPlayerLife,
+    setPlayerBattlefield,
     playerBattlefield,
     setTurnCount,
     setIsPlayerTurn,
@@ -114,14 +110,27 @@ function runOpponentTurnStep2(state) {
   let manaNeeded = 0;
   const chosenCards = [];
 
+  const hasOpponentCreatures = playerBattlefield.some(c => c.type === "creature");
+  const hasOpponentLands = playerBattlefield.some(c => c.type === "land");
+  const hasOwnCreatures = battlefield.some(c => c.type === "creature");
+
+  function isValidSpell(card) {
+    if (!card.targetType) {
+      if (card.name === "Pestilence") return hasOpponentCreatures;
+      return true;
+    }
+    if (card.name === "Giant Growth") return hasOwnCreatures;
+    if (card.name === "Tsunami") return hasOpponentLands;
+    return true;
+  }
+
   const playableCards = hand
-    .filter(c => c.type === "creature" || c.type === "spell")
+    .filter(c => (c.type === "creature" || c.type === "spell") && isValidSpell(c))
     .sort((a, b) => (a.type === "creature" ? -1 : 1));
 
   for (const card of playableCards) {
     const color = card.color;
     const colorAvailable = (colorCounts[color] || 0) - (usedColorCount[color] || 0);
-
     if (colorAvailable >= 1 && manaNeeded + card.manaCost <= availableLands.length) {
       usedColorCount[color] = (usedColorCount[color] || 0) + 1;
       manaNeeded += card.manaCost;
@@ -129,7 +138,6 @@ function runOpponentTurnStep2(state) {
     }
   }
 
-  // ✅ Tap required number of lands
   let manaGenerated = 0;
   for (const land of battlefield) {
     if (!land.tapped && manaGenerated < manaNeeded) {
@@ -152,25 +160,60 @@ function runOpponentTurnStep2(state) {
   let remainingMana = manaGenerated;
 
   for (const card of hand) {
-    if (chosenCards.includes(card) && remainingMana >= card.manaCost) {
-      remainingMana -= card.manaCost;
-
-      if (card.type === "creature") {
-        newBattlefield.push({
-          ...card,
-          tapped: false,
-          blocking: null,
-          damageTaken: 0,
-        });
-        newLog.push(`👺 Opponent summons ${card.name} (${card.attack}/${card.defense}).`);
-        if (card.special) newLog.push(`✨ ${card.name} — ${card.special}`);
-      } else if (card.type === "spell") {
-        setPlayerLife(prev => Math.max(0, prev - card.damage ?? 3));
-        newGraveyard.push(card);
-        newLog.push(`⚡ Opponent casts ${card.name} for ${card.damage ?? 3} damage!`);
-      }
-    } else {
+    if (!chosenCards.includes(card) || remainingMana < card.manaCost) {
       newHand.push(card);
+      continue;
+    }
+
+    remainingMana -= card.manaCost;
+
+    if (card.type === "creature") {
+      newBattlefield.push({
+        ...card,
+        tapped: false,
+        blocking: null,
+        damageTaken: 0,
+      });
+      newLog.push(`👺 Opponent summons ${card.name} (${card.attack}/${card.defense}).`);
+      if (card.special) newLog.push(`✨ ${card.name} — ${card.special}`);
+    } else if (card.type === "spell") {
+      if (card.name === "Pestilence") {
+        const creatureCount = playerBattlefield.filter(c => c.type === "creature").length;
+        setPlayerLife(prev => Math.max(0, prev - creatureCount));
+        newGraveyard.push(card);
+        newLog.push(`☠️ ${card.name} deals ${creatureCount} damage to you.`);
+      } else if (card.name === "Tsunami") {
+        const lands = playerBattlefield.filter(c => c.type === "land");
+        if (lands.length > 0) {
+          const grouped = lands.reduce((acc, land) => {
+            acc[land.name] = (acc[land.name] || 0) + 1;
+            return acc;
+          }, {});
+          const rarestLand = Object.entries(grouped).sort((a, b) => a[1] - b[1])[0][0];
+          const target = lands.find(c => c.name === rarestLand);
+          if (target) {
+            setLog(prev => [...prev, `🌊 ${card.name} destroys your ${target.name}.`]);
+            setPlayerBattlefield(prev => prev.filter(c => c.id !== target.id));
+            newGraveyard.push(card);
+          }
+        }
+      } else if (card.name === "Lightning Bolt") {
+        const targets = playerBattlefield.filter(c => c.type === "creature");
+        if (targets.length > 0) {
+          const target = targets[0];
+          setPlayerBattlefield(prev => prev.filter(c => c.id !== target.id));
+          newGraveyard.push(card);
+          newLog.push(`🔥 ${card.name} destroys your ${target.name}.`);
+        } else {
+          setPlayerLife(prev => Math.max(0, prev - (card.damage ?? 3)));
+          newGraveyard.push(card);
+          newLog.push(`⚡ ${card.name} hits you for ${card.damage ?? 3} damage!`);
+        }
+      } else {
+        setPlayerLife(prev => Math.max(0, prev - (card.damage ?? 3)));
+        newGraveyard.push(card);
+        newLog.push(`⚡ ${card.name} hits you for ${card.damage ?? 3} damage!`);
+      }
     }
   }
 
@@ -179,7 +222,6 @@ function runOpponentTurnStep2(state) {
   setGraveyard(prev => [...prev, ...newGraveyard]);
   newLog.forEach(msg => setLog(prev => [...prev, msg]));
 
-  // ✅ Check for attackers
   const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
   const defenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
 
@@ -192,7 +234,6 @@ function runOpponentTurnStep2(state) {
     return;
   }
 
-  // ✅ No blockers: deal direct damage
   attackers.forEach(card => {
     setPlayerLife(prev => Math.max(0, prev - card.attack));
     setLog(prev => [...prev, `💥 ${card.name} attacks you for ${card.attack} damage.`]);

@@ -44,7 +44,16 @@ export default function GameProvider({ children }) {
   useEffect(() => { playerLifeRef.current = playerLife; }, [playerLife]);
   useEffect(() => { opponentLifeRef.current = opponentLife; }, [opponentLife]);
 
-  const [manaPool, setManaPool] = useState({ red: 0, green: 0 });
+  const [manaPool, setManaPool] = useState({
+    red: 0,
+    green: 0,
+    blue: 0,
+    white: 0,
+    black: 0,
+  });
+
+  const [playerColors, setPlayerColors] = useState(["blue", "white"]);
+
   const [playedLand, setPlayedLand] = useState(false);
   const [hasDrawnCard, setHasDrawnCard] = useState(false);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
@@ -114,7 +123,7 @@ export default function GameProvider({ children }) {
     setPlayerBattlefield([]);
     setOpponentBattlefield([]);
     setGraveyard([]);
-    setManaPool({ red: 0, green: 0 });
+    setManaPool({ red: 0, green: 0, blue: 0, white: 0, black: 0 });
     setPlayedLand(false);
     setHasDrawnCard(false);
     setIsPlayerTurn(true);
@@ -218,6 +227,8 @@ export default function GameProvider({ children }) {
     gameOver,
     gameResult,
     restartGame,
+    playerColors,
+    setPlayerColors,
   };
 
   return (
