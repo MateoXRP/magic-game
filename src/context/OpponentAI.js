@@ -222,24 +222,32 @@ function runOpponentTurnStep2(state) {
   setGraveyard(prev => [...prev, ...newGraveyard]);
   newLog.forEach(msg => setLog(prev => [...prev, msg]));
 
-  const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
-  const defenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
+  // ✅ SMART ATTACK LOGIC
+  const untappedAttackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
+  const untappedDefenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
 
-  if (attackers.length > 0 && defenders.length > 0) {
-    attackers.forEach(c => (c.tapped = true));
+  let chosenAttackers = [];
+
+  if (untappedDefenders.length === 0) {
+    // No blockers — swing with everything
+    chosenAttackers = [...untappedAttackers];
+  } else {
+    // Only attack with creatures that can't be killed if blocked
+    chosenAttackers = untappedAttackers.filter(attacker =>
+      !untappedDefenders.some(defender => defender.attack >= attacker.defense)
+    );
+  }
+
+  if (chosenAttackers.length > 0) {
+    chosenAttackers.forEach(c => (c.tapped = true));
     setOpponentBattlefield([...newBattlefield]);
-    setDeclaredAttackers(attackers.map(c => c.id));
+    setDeclaredAttackers(chosenAttackers.map(c => c.id));
     setBlockingPhase(true);
     setLog(prev => [...prev, `🛡️ Awaiting player to assign blockers.`]);
     return;
   }
 
-  attackers.forEach(card => {
-    setPlayerLife(prev => Math.max(0, prev - card.attack));
-    setLog(prev => [...prev, `💥 ${card.name} attacks you for ${card.attack} damage.`]);
-    card.tapped = true;
-  });
-
+  // No attacks — pass turn
   setOpponentBattlefield([...newBattlefield]);
 
   currentTurn.current = "player";
