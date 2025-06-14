@@ -69,7 +69,7 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
 
         if (targetCount >= 2) {
           logs.push(`☠️ Opponent casts Pestilence, dealing ${targetCount} damage to the player.`);
-          state.setPlayerLife(prev => Math.max(0, prev - targetCount));
+          opponentLife -= targetCount;
         } else {
           logs.push(`☠️ Opponent holds Pestilence (not enough creatures to punish).`);
           continue;
@@ -115,6 +115,7 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
         const otherOptions = playableSpells.filter(s => s.name !== "Holy Water");
         if (opponentLife <= 10 && otherOptions.length <= 1) {
           logs.push(`💧 Opponent casts Holy Water to heal.`);
+          opponentLife += 3;
         } else {
           logs.push(`💧 Opponent holds Holy Water (not needed).`);
           continue;
@@ -142,5 +143,6 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
     graveyard,
     mana: updatedMana,
     logs,
+    opponentLife, // ✅ Return the updated life total if changed
   };
 }

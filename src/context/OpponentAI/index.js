@@ -36,6 +36,7 @@ export function runOpponentTurn(state, onComplete = () => {}) {
 
   setTimeout(() => {
     const logMessages = [];
+
     let hand = [...opponentHand];
     let library = [...opponentLibrary];
     let battlefield = untapBattlefield([...opponentBattlefield]);
@@ -49,6 +50,7 @@ export function runOpponentTurn(state, onComplete = () => {}) {
     try {
       logMessages.push(`🤖 Opponent's turn begins.`);
       logMessages.push(`🧠 Hand: ${hand.map(c => c.name).join(", ")}`);
+      logMessages.push(`❤️ CPU Life: ${opponentLife} | Player Life: ${playerLife}`);
       logMessages.push(`🔄 Untapped all battlefield cards.`);
 
       const drawResult = drawCard(library, hand);

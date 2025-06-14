@@ -100,6 +100,8 @@ export function resolveCombatPhase(state) {
       tapped: c.tapped || c.attacking,
       blocking: null,
       damageTaken: 0,
+      tempAttack: undefined,
+      tempDefense: undefined,
     }))
   );
 
@@ -108,6 +110,8 @@ export function resolveCombatPhase(state) {
       ...c,
       blocking: null,
       damageTaken: 0,
+      tempAttack: undefined,
+      tempDefense: undefined,
     }))
   );
 

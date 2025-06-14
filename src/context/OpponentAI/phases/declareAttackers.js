@@ -1,50 +1,53 @@
 // src/context/OpponentAI/phases/declareAttackers.js
 
-export function declareAttackers(battlefield, playerBattlefield = []) {
-  const attackers = [];
-  let total = 0;
+export function declareAttackers(battlefield, opponentBattlefield) {
+  const updatedBattlefield = battlefield.map(c => ({ ...c, attacking: false }));
 
-  const untappedCreatures = battlefield.filter(c => c.type === "creature" && !c.tapped);
-  const availableBlockers = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
+  const attackers = updatedBattlefield.filter(c => c.type === "creature" && !c.tapped);
+  const blockers = opponentBattlefield.filter(c => c.type === "creature" && !c.tapped);
 
-  for (const creature of untappedCreatures) {
-    let shouldAttack = false;
+  let totalDamage = 0;
+  const logMessages = [];
 
-    if (availableBlockers.length === 0) {
-      // No blockers — always attack
-      shouldAttack = true;
-    } else {
-      // Simulate worst-case block for this attacker
-      const sortedBlockers = [...availableBlockers].sort((a, b) => b.defense - a.defense);
-      const worstBlocker = sortedBlockers[0];
+  if (attackers.length === 0) {
+    logMessages.push("⏭️ Opponent ends turn without attacking.");
+    return {
+      battlefield: updatedBattlefield,
+      totalDamage,
+      log: logMessages.join("\n"),
+    };
+  }
 
-      // If attacker can survive or trade favorably, allow attack
-      const attack = (creature.tempAttack || 0) + creature.attack;
-      const defense = (creature.tempDefense || 0) + creature.defense;
+  // Basic swarm logic: if CPU has more creatures than the player OR player has no blockers
+  const shouldSwarm =
+    blockers.length === 0 || attackers.length > blockers.length + 1;
 
-      if (attack >= worstBlocker.defense || defense > worstBlocker.attack) {
-        shouldAttack = true;
+  if (shouldSwarm) {
+    attackers.forEach(c => {
+      c.attacking = true;
+      totalDamage += c.attack || 0;
+      logMessages.push(`⚔️ ${c.name} declared as attacker.`);
+    });
+  } else {
+    // Conservative attack logic (unchanged)
+    for (const attacker of attackers) {
+      if (blockers.length === 0 || attacker.attack > 2) {
+        attacker.attacking = true;
+        totalDamage += attacker.attack || 0;
+        logMessages.push(`⚔️ ${attacker.name} declared as attacker.`);
       }
-    }
-
-    if (shouldAttack) {
-      attackers.push(creature);
-      total += (creature.tempAttack || 0) + creature.attack;
     }
   }
 
-  const updated = battlefield.map(c => {
-    if (attackers.includes(c)) {
-      return { ...c, attacking: true, tapped: true };
-    }
-    return c;
-  });
+  if (totalDamage === 0) {
+    logMessages.push("⏭️ Opponent ends turn without attacking.");
+  } else {
+    logMessages.unshift(`⚔️ Opponent attacks with ${totalDamage > 0 ? attackers.filter(c => c.attacking).length : 0} creature(s) for ${totalDamage} damage.`);
+  }
 
   return {
-    battlefield: updated,
-    totalDamage: total,
-    log: attackers.length > 0
-      ? `⚔️ Opponent attacks with ${attackers.length} creature(s) for ${total} damage.`
-      : `⏭️ Opponent ends turn without attacking.`,
+    battlefield: updatedBattlefield,
+    totalDamage,
+    log: logMessages.join("\n"),
   };
 }
