@@ -13,9 +13,12 @@ export default function Card({
   tappedCount = 0,
   label = "",
   showCost = false,
+  dimmed = null,
 }) {
   const isFullyTapped =
     card.type === "land" ? tappedCount >= (groupedCount || 1) : card.tapped;
+
+  const isDimmed = dimmed ?? (isFullyTapped && !card.justPlayed);
 
   const effectiveAttack =
     card.type === "creature" ? getEffectiveAttack(card, battlefield) : null;
@@ -28,44 +31,39 @@ export default function Card({
   else if (isAttacking) borderClass = "border-red-500 border-4";
   else if (isTargetable) borderClass = "border-yellow-400 border-4";
 
-  const manaSymbol =
-    card.color === "red" ? "🔥" :
-    card.color === "green" ? "🌲" :
-    card.color === "blue" ? "💧" :
-    card.color === "white" ? "✨" :
-    card.color === "black" ? "💀" :
-    "";
+  const cardColorClass = getCardColor(card);
+  const tappedStyle = isDimmed
+    ? "opacity-70 brightness-90 border-gray-400"
+    : "";
+
+  const isWhiteCard = card.color === "white";
+  const textColorClass = isWhiteCard ? "text-black" : "text-white";
 
   return (
     <div
       onClick={onClick}
-      className={`p-2 border rounded cursor-pointer w-[100px] h-[120px] text-center flex flex-col justify-center ${borderClass} ${
-        isFullyTapped ? "bg-gray-500 text-white" : getCardColor(card.color)
-      }`}
+      className={`w-[100px] h-[120px] rounded flex flex-col justify-center items-center text-center ${textColorClass} cursor-pointer shadow-md ${borderClass} ${cardColorClass} ${tappedStyle}`}
     >
-      <div className="text-2xl">{card.emoji}</div>
-      <div className="font-bold text-sm">{card.name}</div>
+      <div className="text-3xl">{card.emoji}</div>
+      <div className="text-sm font-bold mt-1 px-1">{card.name}</div>
 
-      {/* Creature stats */}
       {card.type === "creature" && (
         <div className="text-xs mt-1">
           {effectiveAttack}/{effectiveDefense}
         </div>
       )}
 
-      {/* Mana cost shown only in hand */}
-      {showCost && card.type !== "land" && card.manaCost != null && (
-        <div className="text-xs mt-1">Cost: {card.manaCost} {manaSymbol}</div>
+      {groupedCount !== null && (
+        <div className="text-xs mt-1 italic">x{groupedCount - tappedCount}</div>
       )}
 
-      {/* Grouped land count */}
-      {card.type === "land" && groupedCount > 1 && (
-        <div className="text-xs mt-1">{groupedCount - tappedCount}</div>
+      {label && (
+        <div className="text-xs mt-1 text-blue-200 font-bold">{label}</div>
       )}
 
-      {/* Status labels */}
-      {label && <div className="text-xs italic mt-1">{label}</div>}
-      {isAttacking && <div className="text-xs text-red-300">⚔️ Attacking</div>}
+      {showCost && card.manaCost !== undefined && (
+        <div className="text-xs mt-1">Cost: {card.manaCost}</div>
+      )}
     </div>
   );
 }

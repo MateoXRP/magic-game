@@ -1,5 +1,4 @@
 // src/engine/combatEngine.js
-
 import { getEffectiveAttack } from "../utils";
 
 export function resolveCombatPhase(state) {
@@ -34,11 +33,7 @@ export function resolveCombatPhase(state) {
       const attacker = updatedOpponent.find(c => c.id === attackerId);
       if (!attacker) return;
 
-      // ✅ Fix: correctly find blocker assigned to this attacker
-      const blockerId = Object.entries(blockAssignments).find(
-        ([, v]) => v === attackerId
-      )?.[0];
-
+      const blockerId = blockAssignments[attackerId];
       const blocker = blockerId ? updatedPlayer.find(c => c.id === blockerId) : null;
 
       if (blockerId && blocker) {

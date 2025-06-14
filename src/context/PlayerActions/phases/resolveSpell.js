@@ -44,7 +44,9 @@ export function resolveSpell(targetId, state) {
         ? `🌿 ${card.name} boosts ${target.name} with +${card.boost.attack}/${card.boost.defense}.`
         : `🌿 ${card.name} was cast, but target is gone.`,
     ]);
-  } else if (card.name === "Lightning Bolt") {
+  }
+
+  else if (card.name === "Lightning Bolt") {
     if (targetId === "opponent") {
       setOpponentLife(hp => Math.max(0, hp - card.damage));
       setLog(prev => [...prev, `⚡ ${card.name} hits opponent for ${card.damage} damage.`]);
@@ -69,7 +71,9 @@ export function resolveSpell(targetId, state) {
           : `🔥 ${card.name} hits ${target.name} for ${card.damage} damage.`,
       ]);
     }
-  } else if (card.name === "Tsunami") {
+  }
+
+  else if (card.name === "Tsunami") {
     const target = opponentBattlefield.find(c => c.id === targetId);
     if (!target || target.type !== "land") {
       setLog(prev => [...prev, `❌ Invalid target for ${card.name}.`]);
@@ -81,4 +85,3 @@ export function resolveSpell(targetId, state) {
     setLog(prev => [...prev, `🌊 ${card.name} destroys opponent's ${target.name}.`]);
   }
 }
-

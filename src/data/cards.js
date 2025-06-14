@@ -48,7 +48,7 @@ export const redDeck = [
     color: "red",
     manaCost: 1,
     damage: 3,
-    targetType: "opponent|opponent-creature",
+    targetType: "opponent-creature|opponent",
     emoji: "⚡",
   })),
 ];

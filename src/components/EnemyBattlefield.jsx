@@ -73,7 +73,6 @@ export default function EnemyBattlefield() {
                 isValidTarget(card, pendingSpell.targetType, playerBattlefield, opponentBattlefield)
               }
               battlefield={opponentBattlefield}
-              label={card.tapped ? "tapped" : ""}
             />
           ))}
 

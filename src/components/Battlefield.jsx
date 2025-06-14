@@ -1,3 +1,4 @@
+// src/components/Battlefield.jsx
 import { useGame } from "../context/GameContext";
 import { useState, useEffect } from "react";
 import Card from "./Card";
@@ -36,7 +37,7 @@ export default function Battlefield() {
     }
 
     if (blockingPhase) {
-      if (!card.tapped && card.type === "creature") {
+      if (card.type === "creature" && !card.tapped) {
         setSelectedBlocker(prev => (prev === card.id ? null : card.id));
       }
       return;
@@ -67,10 +68,9 @@ export default function Battlefield() {
 
   function assignBlock(attackerId) {
     if (!selectedBlocker) return;
-    // ✅ Correct shape: blockerId → attackerId
     setBlockAssignments(prev => ({
       ...prev,
-      [selectedBlocker]: attackerId,
+      [attackerId]: selectedBlocker,
     }));
     setSelectedBlocker(null);
   }
@@ -97,7 +97,10 @@ export default function Battlefield() {
               <Card
                 key={`${group[0].id}-group`}
                 card={group[0]}
-                onClick={() => handleClick(group[0], group.length, tappedCount)}
+                onClick={() =>
+                  !blockingPhase &&
+                  handleClick(group[0], group.length, tappedCount)
+                }
                 groupedCount={group.length}
                 tappedCount={tappedCount}
               />
@@ -111,51 +114,56 @@ export default function Battlefield() {
               onClick={() => handleClick(card)}
               battlefield={playerBattlefield}
               isSelected={selectedBlocker === card.id}
-              isAssigned={Object.keys(blockAssignments).includes(card.id)}
+              isAssigned={Object.values(blockAssignments).includes(card.id)}
               isAttacking={card.attacking}
               isTargetable={
                 pendingSpell &&
                 isValidTarget(card, pendingSpell.targetType, playerBattlefield, opponentBattlefield)
               }
-              label={card.tapped && !card.attacking ? "tapped" : ""}
             />
           ))}
         </div>
 
-        {blockingPhase && selectedBlocker && (
+        {blockingPhase && (
           <>
-            <h3 className="text-sm mt-4 font-semibold text-blue-300 text-center">Choose enemy to block:</h3>
-            <div className="flex flex-wrap justify-center gap-2 mt-2">
-              {declaredAttackers.map(attackerId => {
-                const attacker = opponentBattlefield.find(c => c.id === attackerId);
-                if (!attacker) return null;
-                return (
-                  <Card
-                    key={attacker.id}
-                    card={attacker}
-                    onClick={() => assignBlock(attacker.id)}
-                    isTargetable
-                    battlefield={opponentBattlefield}
-                    label={attacker.tapped ? "tapped" : ""}
-                  />
-                );
-              })}
+            <h3 className="text-sm mt-4 font-semibold text-blue-300 text-center">
+              Select one of your untapped creatures above, then click an enemy attacker below to block:
+            </h3>
+            <div className="flex flex-wrap justify-center gap-2 mt-2 min-h-[130px]">
+              {declaredAttackers.length === 0 ? (
+                <div className="text-gray-400 italic text-center w-full">
+                  No enemy attackers to block this turn.
+                </div>
+              ) : (
+                declaredAttackers.map(attackerId => {
+                  const attacker = opponentBattlefield.find(c => c.id === attackerId);
+                  if (!attacker) return null;
+
+                  const alreadyBlocked = !!blockAssignments[attackerId];
+
+                  return (
+                    <Card
+                      key={attacker.id}
+                      card={attacker}
+                      onClick={alreadyBlocked ? null : () => assignBlock(attackerId)}
+                      isTargetable={!alreadyBlocked}
+                      dimmed={alreadyBlocked} // ✅ correct visual override
+                      battlefield={opponentBattlefield}
+                    />
+                  );
+                })
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={resolveCombat}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow"
+              >
+                Resolve Combat
+              </button>
             </div>
           </>
-        )}
-
-        {blockingPhase && (
-          <div className="flex justify-center mt-4">
-            <button
-              onClick={() => {
-                console.log("🛡️ Resolving combat with blockAssignments:", blockAssignments);
-                resolveCombat();
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            >
-              ✅ Resolve Combat
-            </button>
-          </div>
         )}
       </div>
     </div>

@@ -1,92 +1,66 @@
 // src/utils.js
 
-// Passive buff rules
-const BUFF_RULES = [
-    { source: "Goblin Chief", target: "Goblin", attack: 1, defense: 0 },
-    { source: "War Drummer", target: "Goblin Chief", attack: 1, defense: 0 },
-    { source: "Forest Bear", target: "Elvish Scout", attack: 1, defense: 0 },
-    { source: "Ancient Treefolk", target: "Forest Bear", attack: 1, defense: 0 },
-    { source: "Zombie", target: "Skeleton", attack: 1, defense: 0 },
-    { source: "Dreadlord", target: "Zombie", attack: 1, defense: 0 },
-    { source: "Knight", target: "Soldier", attack: 0, defense: 1 },
-    { source: "Paladin", target: "Knight", attack: 0, defense: 1 },
-    { source: "Sea Serpent", target: "Merfolk Scout", attack: 0, defense: 1 },
-    { source: "Ancient Leviathan", target: "Sea Serpent", attack: 0, defense: 1 },
-  ];
-  
-  export function getCardColor(color) {
-    switch (color) {
-      case "red":
-        return "bg-red-700 text-white";
-      case "green":
-        return "bg-green-700 text-white";
-      case "blue":
-        return "bg-blue-700 text-white";
-      case "white":
-        return "bg-yellow-200 text-black";
-      case "black":
-        return "bg-gray-800 text-white";
-      default:
-        return "bg-gray-600 text-white";
-    }
+export function getCardColor(card) {
+    const map = {
+      red: "bg-red-600",
+      green: "bg-green-600",
+      blue: "bg-blue-600",
+      white: "bg-gray-200", // light gray for white cards
+      black: "bg-gray-800",
+    };
+    return map[card?.color] || "bg-gray-500";
   }
   
   export function getEffectiveAttack(card, battlefield) {
     if (card.type !== "creature") return 0;
   
-    let totalBuff = 0;
+    let bonus = 0;
   
-    BUFF_RULES.forEach(rule => {
-      if (card.name === rule.target) {
-        const sources = battlefield.filter(
-          c => c.name === rule.source && c.id !== card.id
-        );
-        totalBuff += sources.length * rule.attack;
-      }
-    });
+    if (card.name === "Goblin" && battlefield.some(c => c.name === "Goblin Chief")) bonus += 1;
+    if (card.name === "Goblin Chief" && battlefield.some(c => c.name === "War Drummer")) bonus += 1;
   
-    return card.attack + totalBuff;
+    if (card.name === "Elvish Scout" && battlefield.some(c => c.name === "Forest Bear")) bonus += 1;
+    if (card.name === "Forest Bear" && battlefield.some(c => c.name === "Ancient Treefolk")) bonus += 1;
+  
+    if (card.name === "Skeleton" && battlefield.some(c => c.name === "Zombie")) bonus += 1;
+    if (card.name === "Zombie" && battlefield.some(c => c.name === "Dreadlord")) bonus += 1;
+  
+    return (card.attack || 0) + bonus + (card.tempAttack || 0);
   }
   
   export function getEffectiveDefense(card, battlefield) {
     if (card.type !== "creature") return 0;
   
-    let totalBuff = 0;
+    let bonus = 0;
   
-    BUFF_RULES.forEach(rule => {
-      if (card.name === rule.target) {
-        const sources = battlefield.filter(
-          c => c.name === rule.source && c.id !== card.id
-        );
-        totalBuff += sources.length * rule.defense;
-      }
-    });
+    if (card.name === "Merfolk Scout" && battlefield.some(c => c.name === "Sea Serpent")) bonus += 1;
+    if (card.name === "Sea Serpent" && battlefield.some(c => c.name === "Ancient Leviathan")) bonus += 1;
   
-    return card.defense + totalBuff;
+    if (card.name === "Soldier" && battlefield.some(c => c.name === "Knight")) bonus += 1;
+    if (card.name === "Knight" && battlefield.some(c => c.name === "Paladin")) bonus += 1;
+  
+    return (card.defense || 0) + bonus + (card.tempDefense || 0);
   }
   
-  /**
-   * Determine if a card is a valid target for a spell based on `targetType`
-   */
   export function isValidTarget(card, targetType, playerBattlefield, opponentBattlefield) {
-    const isOpponent = opponentBattlefield.includes(card);
-    const isPlayer = playerBattlefield.includes(card);
+    if (!targetType || !card) return false;
   
-    const types = targetType?.split("|") ?? [];
+    const allowed = targetType.split("|");
   
-    return types.some(type => {
-      switch (type) {
-        case "opponent":
-          return isOpponent && card.type !== "creature";
-        case "opponent-creature":
-          return isOpponent && card.type === "creature";
-        case "opponent-land":
-          return isOpponent && card.type === "land";
-        case "self-creature":
-          return isPlayer && card.type === "creature";
-        default:
-          return false;
-      }
-    });
+    if (card === "opponent") return allowed.includes("opponent");
+  
+    if (opponentBattlefield.includes(card)) {
+      if (card.type === "creature" && allowed.includes("opponent-creature")) return true;
+      if (card.type === "land" && allowed.includes("opponent-land")) return true;
+      return false;
+    }
+  
+    if (playerBattlefield.includes(card)) {
+      if (card.type === "creature" && allowed.includes("self-creature")) return true;
+      if (card.type === "land" && allowed.includes("self-land")) return true;
+      return false;
+    }
+  
+    return false;
   }
   
