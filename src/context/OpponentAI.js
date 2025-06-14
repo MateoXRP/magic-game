@@ -229,10 +229,8 @@ function runOpponentTurnStep2(state) {
   let chosenAttackers = [];
 
   if (untappedDefenders.length === 0) {
-    // No blockers — swing with everything
     chosenAttackers = [...untappedAttackers];
   } else {
-    // Only attack with creatures that can't be killed if blocked
     chosenAttackers = untappedAttackers.filter(attacker =>
       !untappedDefenders.some(defender => defender.attack >= attacker.defense)
     );
@@ -248,6 +246,7 @@ function runOpponentTurnStep2(state) {
   }
 
   // No attacks — pass turn
+  setLog(prev => [...prev, `🕒 Opponent ends turn without attacking.`]);
   setOpponentBattlefield([...newBattlefield]);
 
   currentTurn.current = "player";

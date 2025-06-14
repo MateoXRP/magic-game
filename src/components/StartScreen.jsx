@@ -28,6 +28,7 @@ export default function StartScreen({ onStart }) {
     setLibrary,
     setOpponentHand,
     setOpponentLibrary,
+    setLog,
   } = useGame();
 
   const [playerChoices, setPlayerChoices] = useState([]);
@@ -87,6 +88,12 @@ export default function StartScreen({ onStart }) {
     const fullCpuDeck = createDualColorDeck(cpuDeckA, cpuDeckB);
     setOpponentHand(fullCpuDeck.slice(0, 7));
     setOpponentLibrary(fullCpuDeck.slice(7));
+
+    setLog(prev => [
+      ...prev,
+      `🃏 Your opening hand: ${fullPlayerDeck.slice(0, 7).map(c => c.name).join(", ")}`,
+      `🃏 Opponent's opening hand: ${fullCpuDeck.slice(0, 7).map(c => c.name).join(", ")}`,
+    ]);
   }
 
   return (

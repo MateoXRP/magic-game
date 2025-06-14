@@ -59,6 +59,7 @@ export function playCard(card, state) {
 
   setManaPool(newMana);
   setHand(prev => prev.filter(c => c.id !== card.id));
+  setLog(prev => [...prev, `🔥 Spent ${cost} mana to cast ${card.name}.`]);
 
   if (card.type === "creature") {
     setPlayerBattlefield(prev => [
@@ -241,9 +242,10 @@ export function startTurn(state) {
   setHasDrawnCard(false);
 
   if (library.length > 0) {
-    setHand(prev => [...prev, library[0]]);
+    const drawnCard = library[0];
+    setHand(prev => [...prev, drawnCard]);
     setLibrary(prev => prev.slice(1));
     setHasDrawnCard(true);
-    setLog(prev => [...prev, `📅 Drew a card.`]);
+    setLog(prev => [...prev, `📅 Drew ${drawnCard.name}.`]);
   }
 }

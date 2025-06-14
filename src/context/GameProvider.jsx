@@ -98,6 +98,7 @@ export default function GameProvider({ children }) {
 
   function handleEndTurn() {
     if (gameOver) return;
+    setLog(prev => [...prev, "➡️ You ended your turn."]);
     currentTurn.current = "opponent";
     setIsPlayerTurn(false);
     setTimeout(() => {
@@ -171,7 +172,6 @@ export default function GameProvider({ children }) {
     setPlayerLifeState(20);
     setOpponentLifeState(20);
 
-    // ✅ Final turn reset logic
     setTurnCount(1);
     setIsPlayerTurn(true);
     currentTurn.current = "player";
