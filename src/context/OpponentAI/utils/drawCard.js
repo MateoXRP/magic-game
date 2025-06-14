@@ -1,19 +1,16 @@
-// src/context/OpponentAI/utils/drawCard.js
+// src/context/OpponentAI/phases/drawCard.js
 
 export function drawCard(library, hand) {
-  if (library.length > 0) {
-    const drawn = library[0];
-    return {
-      hand: [...hand, drawn],
-      library: library.slice(1),
-      log: `📅 Opponent draws ${drawn.name}.`,
-    };
+  const logs = [];
+
+  if (library.length === 0) {
+    logs.push("📭 Opponent's library is empty.");
+    return { library, hand, log: logs.join("\n") };
   }
 
-  // ✅ Always log if the deck is empty
-  return {
-    hand,
-    library,
-    log: "📭 Opponent's library is empty.",
-  };
+  const [card, ...remainingLibrary] = library;
+  const updatedHand = [...hand, card];
+  logs.push(`📅 Opponent draws ${card.name}.`);
+
+  return { library: remainingLibrary, hand: updatedHand, log: logs.join("\n") };
 }

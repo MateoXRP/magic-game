@@ -1,13 +1,8 @@
-// src/context/OpponentAI/utils/generateMana.js
+// src/context/OpponentAI/phases/generateMana.js
 
 export function generateMana(battlefield) {
-  const untapped = battlefield.filter(c => c.type === "land" && !c.tapped);
-
-  const updated = battlefield.map(c =>
-    untapped.includes(c) ? { ...c, tapped: true } : c
-  );
-
-  const manaPool = {
+  const updatedBattlefield = [...battlefield];
+  const mana = {
     red: 0,
     green: 0,
     blue: 0,
@@ -15,22 +10,22 @@ export function generateMana(battlefield) {
     black: 0,
   };
 
-  for (const land of untapped) {
-    if (land.color && manaPool.hasOwnProperty(land.color)) {
-      manaPool[land.color]++;
+  for (const card of updatedBattlefield) {
+    if (card.type === "land" && !card.tapped) {
+      card.tapped = true;
+      mana[card.color]++;
     }
   }
 
-  const log =
-    `🔥 Opponent taps ${untapped.length} land(s) for mana: ` +
-    Object.entries(manaPool)
-      .filter(([_, v]) => v > 0)
-      .map(([k, v]) => `${v} ${k}`)
+  const log = `🔥 Opponent taps ${Object.values(mana).reduce((a, b) => a + b, 0)} land(s) for mana: ` +
+    Object.entries(mana)
+      .filter(([_, val]) => val > 0)
+      .map(([color, val]) => `${val} ${color}`)
       .join(", ");
 
   return {
-    battlefield: updated,
-    mana: manaPool,
+    battlefield: updatedBattlefield,
+    mana,
     log,
   };
 }

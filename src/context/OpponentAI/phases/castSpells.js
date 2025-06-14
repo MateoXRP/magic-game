@@ -30,22 +30,25 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
 
       if (remaining > 0) continue;
 
+      // Lethal shot logic
       if (spell.name === "Lightning Bolt") {
-        const targets = updatedPlayerBattlefield
-          .filter(c => c.type === "creature")
-          .sort((a, b) => (b.tempAttack || b.attack) - (a.tempAttack || a.attack));
-        target = targets[0];
+        const damage = 3;
+        const validTargets = updatedPlayerBattlefield.filter(c => c.type === "creature");
+        const targetCreature = validTargets.sort((a, b) => (b.tempAttack || b.attack) - (a.tempAttack || a.attack))[0];
 
-        if (target) {
-          logs.push(`⚡ Opponent casts Lightning Bolt on ${target.name}.`);
-          target.defense -= 3;
-          if (target.defense <= 0) {
-            logs.push(`☠️ ${target.name} is destroyed.`);
-            updatedPlayerBattlefield = updatedPlayerBattlefield.filter(c => c.id !== target.id);
+        if (playerLife <= damage && turnCount > 1) {
+          logs.push(`⚡ Opponent casts Lightning Bolt directly for lethal.`);
+          playerLife -= damage;
+        } else if (targetCreature) {
+          logs.push(`⚡ Opponent casts Lightning Bolt on ${targetCreature.name}.`);
+          targetCreature.defense -= damage;
+          if (targetCreature.defense <= 0) {
+            logs.push(`☠️ ${targetCreature.name} is destroyed.`);
+            updatedPlayerBattlefield = updatedPlayerBattlefield.filter(c => c.id !== targetCreature.id);
           }
         } else if (turnCount > 10) {
           logs.push(`⚡ Opponent casts Lightning Bolt directly at player.`);
-          playerLife -= 3;
+          playerLife -= damage;
         } else {
           logs.push(`⚡ Opponent holds Lightning Bolt (no valid target).`);
           continue;
@@ -69,7 +72,10 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
       if (spell.name === "Pestilence") {
         const targetCount = updatedPlayerBattlefield.filter(c => c.type === "creature").length;
 
-        if (targetCount >= 2) {
+        if (playerLife <= targetCount && turnCount > 1) {
+          logs.push(`☠️ Opponent casts Pestilence for lethal.`);
+          playerLife -= targetCount;
+        } else if (targetCount >= 2) {
           logs.push(`☠️ Opponent casts Pestilence, dealing ${targetCount} damage to the player.`);
           playerLife -= targetCount;
         } else if (turnCount > 10 && targetCount > 0) {
@@ -118,10 +124,7 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
 
       if (spell.name === "Holy Water") {
         const otherOptions = playableSpells.filter(s => s.name !== "Holy Water");
-        if (
-          opponentLife < 20 &&
-          (opponentLife <= 10 || otherOptions.length === 0 || turnCount > 10)
-        ) {
+        if (opponentLife < 20 || otherOptions.length === 0 || turnCount > 10) {
           logs.push(`💧 Opponent casts Holy Water to heal.`);
           opponentLife += 3;
         } else {
@@ -142,7 +145,7 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
         if (spell.name === "Pestilence") return updatedPlayerBattlefield.length > 0;
         if (spell.name === "Tsunami") return updatedPlayerBattlefield.some(c => c.type === "land");
         if (spell.name === "Giant Growth") return updatedBattlefield.some(c => c.type === "creature" && !c.tapped);
-        if (spell.name === "Holy Water") return opponentLife < 20;
+        if (spell.name === "Holy Water") return true;
         return false;
       });
 

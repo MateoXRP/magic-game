@@ -1,12 +1,10 @@
-// src/context/OpponentAI/index.js
-
 import { castSpells } from "./phases/castSpells";
 import { summonCreature } from "./phases/summonCreature";
 import { declareAttackers } from "./phases/declareAttackers";
 import { drawCard } from "./utils/drawCard";
+import { untapBattlefield } from "./utils/untapBattlefield";
 import { playLand } from "./utils/playLand";
 import { generateMana } from "./utils/generateMana";
-import { untapBattlefield } from "./utils/untapBattlefield";
 
 export function runOpponentTurn(state, onComplete = () => {}) {
   const {
@@ -82,7 +80,6 @@ export function runOpponentTurn(state, onComplete = () => {}) {
         library,
         turnCount
       );
-
       hand = spellResult.hand;
       battlefield = spellResult.battlefield;
       updatedPlayerBattlefield = spellResult.updatedPlayerBattlefield;
@@ -105,7 +102,6 @@ export function runOpponentTurn(state, onComplete = () => {}) {
 
       if (attackResult.log) {
         logMessages.push(attackResult.log);
-
         if (totalDamage > 0) {
           tookAction = true;
 
@@ -122,7 +118,7 @@ export function runOpponentTurn(state, onComplete = () => {}) {
           setLog(prev => [...prev, ...logMessages]);
           setPlayerBattlefield(updatedPlayerBattlefield);
 
-          return; // Wait for player blocks
+          return;
         }
       }
 
@@ -131,7 +127,7 @@ export function runOpponentTurn(state, onComplete = () => {}) {
       }
 
       if (!tookAction) {
-        logMessages.push(`🤖 Opponent takes no actions this turn.`);
+        logMessages.push("🤖 Opponent takes no actions this turn.");
       }
 
       setPlayerBattlefield(updatedPlayerBattlefield);

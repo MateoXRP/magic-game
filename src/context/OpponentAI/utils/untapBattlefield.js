@@ -1,12 +1,10 @@
-// src/context/OpponentAI/utils/untapBattlefield.js
+// src/context/OpponentAI/phases/untapBattlefield.js
 
 export function untapBattlefield(battlefield) {
-  return battlefield.map(c => ({
-    ...c,
-    tapped: false,
-    attacking: false,
-    blocking: null,
-    damageTaken: 0,
-  }));
+  return battlefield.map(c => {
+    const untapped = { ...c, tapped: false, attacking: false };
+    delete untapped.tempAttack;
+    delete untapped.tempDefense;
+    return untapped;
+  });
 }
-
