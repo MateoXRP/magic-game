@@ -12,10 +12,9 @@ import {
 } from "firebase/firestore";
 
 export default function GameOver({ onRestart, playerName, onLogout }) {
-  const { gameResult, resetGameState } = useGame();
+  const { gameResult, resetGameState, log } = useGame();
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // Save result to Firestore
   useEffect(() => {
     const saveResult = async () => {
       if (!playerName) return;
@@ -41,7 +40,6 @@ export default function GameOver({ onRestart, playerName, onLogout }) {
     saveResult();
   }, [gameResult, playerName]);
 
-  // Load leaderboard
   useEffect(() => {
     const fetchLeaderboard = async () => {
       const snapshot = await getDocs(collection(db, "magic_leaderboard"));
@@ -58,13 +56,26 @@ export default function GameOver({ onRestart, playerName, onLogout }) {
   }, []);
 
   const handleRestart = () => {
-    resetGameState();   // ✅ Reset full game context
-    onRestart();        // ✅ Return to StartScreen
+    resetGameState();
+    onRestart();
   };
 
   const handleSignOut = () => {
-    resetGameState();   // ✅ Optional cleanup on sign out
-    onLogout();         // ✅ Return to LoginScreen
+    resetGameState();
+    onLogout();
+  };
+
+  const handleDownloadLogs = () => {
+    const text = log.join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "magic-game-log.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -74,7 +85,7 @@ export default function GameOver({ onRestart, playerName, onLogout }) {
       </h2>
       <p className="text-lg mb-6">Game Over</p>
 
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-wrap justify-center gap-4">
         <button
           onClick={handleRestart}
           className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded text-white font-semibold"
@@ -87,13 +98,20 @@ export default function GameOver({ onRestart, playerName, onLogout }) {
         >
           🚪 Sign Out
         </button>
+        <button
+          onClick={handleDownloadLogs}
+          className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded text-white font-semibold"
+        >
+          📥 Download Logs
+        </button>
       </div>
 
-      <div className="w-full max-w-md">
-        <h3 className="text-xl font-bold mb-2">🏆 Top Magic Game Players</h3>
+      <div className="w-full max-w-md mt-6 text-left">
+        <h3 className="text-xl font-bold">🏆 Top Magic Game Players</h3>
+        <hr className="my-2 border-gray-600" />
         <ul className="space-y-1 text-sm">
           {leaderboard.map((entry, idx) => (
-            <li key={entry.name} className="flex justify-between border-b border-gray-700 pb-1">
+            <li key={entry.name} className="flex justify-between">
               <span>{idx + 1}. {entry.name}</span>
               <span>{entry.wins} wins</span>
             </li>
