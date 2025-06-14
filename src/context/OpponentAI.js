@@ -51,8 +51,6 @@ function runOpponentTurnStep1(state) {
       ...prev,
       `📅 Opponent draws ${drawnCard.name}. Hand now has ${hand.length} card(s).`
     ]);
-  } else {
-    setLog(prev => [...prev, `❗ Opponent has no cards left to draw.`]);
   }
 
   const land = hand.find(c => c.type === "land");
@@ -62,17 +60,16 @@ function runOpponentTurnStep1(state) {
     setOpponentHand(hand);
     setOpponentPlayedLand(true);
     setLog(prev => [...prev, `⛰️ Opponent plays ${land.name}.`]);
-  } else {
-    setLog(prev => [
-      ...prev,
-      `🛑 No land played. opponentPlayedLand=${opponentPlayedLand}, land found=${!!land}`
-    ]);
   }
 
   setOpponentBattlefield(battlefield);
 
   setTimeout(() => {
-    runOpponentTurnStep2({ ...state, opponentBattlefield: battlefield, opponentHand: hand });
+    runOpponentTurnStep2({
+      ...state,
+      opponentBattlefield: battlefield,
+      opponentHand: hand,
+    });
   }, 500);
 }
 
@@ -95,6 +92,7 @@ function runOpponentTurnStep2(state) {
     isRunningCPU,
     setBlockingPhase,
     setDeclaredAttackers,
+    playerLife,
   } = state;
 
   let battlefield = [...opponentBattlefield];
@@ -107,11 +105,8 @@ function runOpponentTurnStep2(state) {
   }, {});
 
   const hasOpponentCreatures = playerBattlefield.some(c => c.type === "creature");
-  const hasOpponentLands = playerBattlefield.some(c => c.type === "land");
-  const ownCreatures = battlefield.filter(c => c.type === "creature");
-  const hasOwnCreatures = ownCreatures.length > 0;
+  const hasOwnCreatures = battlefield.some(c => c.type === "creature");
 
-  // Recalculate playable cards based on fresh state
   function isValidSpell(card) {
     if (!card.targetType) {
       if (card.name === "Pestilence") return hasOpponentCreatures;
@@ -120,22 +115,18 @@ function runOpponentTurnStep2(state) {
     if (card.name === "Giant Growth") return hasOwnCreatures;
     if (card.name === "Tsunami") {
       const lands = playerBattlefield.filter(c => c.type === "land");
-      return lands.length > 0 && lands.length <= 2; // ✅ Only if it can stall early
+      return lands.length > 0 && lands.length <= 2;
     }
     return true;
   }
 
-  // New selection loop: prioritize creatures early if board is light
-  let chosenCards = [];
-  let manaNeeded = 0;
-  let usedColorCount = {};
-
   const playable = hand
     .filter(c => (c.type === "creature" || c.type === "spell") && isValidSpell(c))
-    .sort((a, b) => {
-      if (a.type !== b.type) return a.type === "creature" ? -1 : 1;
-      return a.manaCost - b.manaCost;
-    });
+    .sort((a, b) => (a.type === "creature" ? -1 : 1));
+
+  const chosenCards = [];
+  let usedColorCount = {};
+  let manaNeeded = 0;
 
   for (const card of playable) {
     const color = card.color;
@@ -147,7 +138,6 @@ function runOpponentTurnStep2(state) {
     }
   }
 
-  // Tap lands
   let manaGenerated = 0;
   for (const land of battlefield) {
     if (!land.tapped && manaGenerated < manaNeeded) {
@@ -166,8 +156,45 @@ function runOpponentTurnStep2(state) {
   const newGraveyard = [];
   const newLog = [];
   const newHand = [];
-
   let remainingMana = manaGenerated;
+
+  // Giant Growth (before combat)
+  const giantGrowth = hand.find(c => c.name === "Giant Growth");
+  if (giantGrowth && remainingMana >= giantGrowth.manaCost) {
+    const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
+    const blockers = playerBattlefield.filter(c => c.type === "creature");
+
+    let target = null;
+
+    for (const a of attackers) {
+      for (const b of blockers) {
+        if (a.attack <= b.defense && a.attack + 3 > b.defense) {
+          target = a;
+          break;
+        }
+      }
+      if (target) break;
+    }
+
+    if (!target && attackers.length > 0) {
+      target = attackers.reduce((weakest, curr) =>
+        curr.attack < weakest.attack ? curr : weakest
+      );
+    }
+
+    if (target) {
+      const updated = newBattlefield.map(c =>
+        c.id === target.id
+          ? { ...c, attack: c.attack + 3, defense: c.defense + 3, boosted: true }
+          : c
+      );
+      setOpponentBattlefield(updated);
+      setGraveyard(prev => [...prev, giantGrowth]);
+      setLog(prev => [...prev, `🌿 Giant Growth boosts ${target.name} with +3/3.`]);
+      hand = hand.filter(c => c.id !== giantGrowth.id);
+      remainingMana -= giantGrowth.manaCost;
+    }
+  }
 
   for (const card of hand) {
     if (!chosenCards.includes(card) || remainingMana < card.manaCost) {
@@ -188,29 +215,35 @@ function runOpponentTurnStep2(state) {
       if (card.special) newLog.push(`✨ ${card.name} — ${card.special}`);
     } else if (card.type === "spell") {
       if (card.name === "Pestilence") {
-        const creatureCount = playerBattlefield.filter(c => c.type === "creature").length;
-        setPlayerLife(prev => Math.max(0, prev - creatureCount));
-        newGraveyard.push(card);
-        newLog.push(`☠️ ${card.name} deals ${creatureCount} damage to you.`);
+        const targets = playerBattlefield.filter(c => c.type === "creature");
+        const damage = targets.length;
+        const playerLifeNow = typeof playerLife === "number" ? playerLife : 20;
+
+        if (damage >= 2 || playerLifeNow - damage <= 0) {
+          setPlayerLife(prev => Math.max(0, prev - damage));
+          newGraveyard.push(card);
+          newLog.push(`☠️ ${card.name} deals ${damage} damage to you.`);
+        } else {
+          newHand.push(card); // Skip casting
+          remainingMana += card.manaCost;
+        }
       } else if (card.name === "Tsunami") {
         const lands = playerBattlefield.filter(c => c.type === "land");
         if (lands.length > 0) {
-          const grouped = lands.reduce((acc, land) => {
-            acc[land.name] = (acc[land.name] || 0) + 1;
-            return acc;
-          }, {});
-          const rarestLand = Object.entries(grouped).sort((a, b) => a[1] - b[1])[0][0];
-          const target = lands.find(c => c.name === rarestLand);
-          if (target) {
-            setLog(prev => [...prev, `🌊 ${card.name} destroys your ${target.name}.`]);
-            setPlayerBattlefield(prev => prev.filter(c => c.id !== target.id));
-            newGraveyard.push(card);
-          }
+          const target = lands[0];
+          setPlayerBattlefield(prev => prev.filter(c => c.id !== target.id));
+          newGraveyard.push(card);
+          newLog.push(`🌊 Tsunami destroys your ${target.name}.`);
         }
       } else if (card.name === "Lightning Bolt") {
         const targets = playerBattlefield.filter(c => c.type === "creature");
-        if (targets.length > 0) {
-          const target = targets[0];
+        const priority = ["Goblin Chief", "Knight", "Paladin", "Forest Bear", "Sea Serpent"];
+
+        let target =
+          targets.find(c => priority.includes(c.name)) ||
+          targets.sort((a, b) => b.attack - a.attack)[0];
+
+        if (target) {
           setPlayerBattlefield(prev => prev.filter(c => c.id !== target.id));
           newGraveyard.push(card);
           newLog.push(`🔥 ${card.name} destroys your ${target.name}.`);
@@ -219,10 +252,6 @@ function runOpponentTurnStep2(state) {
           newGraveyard.push(card);
           newLog.push(`⚡ ${card.name} hits you for ${card.damage ?? 3} damage!`);
         }
-      } else {
-        setPlayerLife(prev => Math.max(0, prev - (card.damage ?? 3)));
-        newGraveyard.push(card);
-        newLog.push(`⚡ ${card.name} hits you for ${card.damage ?? 3} damage!`);
       }
     }
   }
@@ -232,23 +261,23 @@ function runOpponentTurnStep2(state) {
   setGraveyard(prev => [...prev, ...newGraveyard]);
   newLog.forEach(msg => setLog(prev => [...prev, msg]));
 
-  const untappedAttackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
-  const untappedDefenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
+  const attackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
+  const blockers = playerBattlefield.filter(c => c.type === "creature");
 
-  let chosenAttackers = [];
+  let declared = [];
 
-  if (untappedDefenders.length === 0) {
-    chosenAttackers = [...untappedAttackers];
+  if (blockers.length === 0) {
+    declared = [...attackers];
   } else {
-    chosenAttackers = untappedAttackers.filter(attacker =>
-      !untappedDefenders.some(defender => defender.attack >= attacker.defense)
+    declared = attackers.filter(a =>
+      !blockers.some(b => b.attack >= a.defense)
     );
   }
 
-  if (chosenAttackers.length > 0) {
-    chosenAttackers.forEach(c => (c.tapped = true));
+  if (declared.length > 0) {
+    declared.forEach(c => (c.tapped = true));
     setOpponentBattlefield([...newBattlefield]);
-    setDeclaredAttackers(chosenAttackers.map(c => c.id));
+    setDeclaredAttackers(declared.map(c => c.id));
     setBlockingPhase(true);
     setLog(prev => [...prev, `🛡️ Awaiting player to assign blockers.`]);
     return;
