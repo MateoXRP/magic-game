@@ -79,10 +79,9 @@ export function playCard(card, state) {
     ].filter(Boolean));
   } else if (card.type === "spell") {
     if (card.targetType) {
-      setPendingSpell(card); // wait for user to select a target
+      setPendingSpell(card);
       setLog(prev => [...prev, `🎯 Select a target for ${card.name}.`]);
     } else {
-      // Spells with no targeting resolve instantly
       setGraveyard(prev => [...prev, card]);
 
       if (card.name === "Holy Water") {
@@ -128,6 +127,10 @@ export function resolveSpell(targetId, state) {
         attack: c.attack + (card.boost?.attack || 3),
         defense: c.defense + (card.boost?.defense || 3),
         boosted: true,
+        tempBoost: {
+          attack: card.boost?.attack || 3,
+          defense: card.boost?.defense || 3,
+        },
       };
     });
 
@@ -151,10 +154,9 @@ export function resolveSpell(targetId, state) {
       }
 
       const newDefense = target.defense - card.damage;
-      const updated = opponentBattlefield.map(c => {
-        if (c.id !== targetId) return c;
-        return { ...c, defense: newDefense };
-      });
+      const updated = opponentBattlefield.map(c =>
+        c.id !== targetId ? c : { ...c, defense: newDefense }
+      );
 
       const remaining = updated.filter(c => c.type !== "creature" || c.defense > 0);
       setOpponentBattlefield(remaining);
@@ -232,12 +234,24 @@ export function startTurn(state) {
   setManaPool({ red: 0, green: 0, blue: 0, white: 0, black: 0 });
 
   setPlayerBattlefield(prev =>
-    prev.map(c =>
-      c.type === "land" || c.type === "creature"
-        ? { ...c, tapped: false, attacking: false, blocking: null, damageTaken: 0 }
-        : c
-    )
+    prev.map(c => {
+      let updated = { ...c };
+      if (updated.type === "creature" || updated.type === "land") {
+        updated.tapped = false;
+        updated.attacking = false;
+        updated.blocking = null;
+        updated.damageTaken = 0;
+      }
+      if (updated.tempBoost) {
+        updated.attack -= updated.tempBoost.attack;
+        updated.defense -= updated.tempBoost.defense;
+        delete updated.tempBoost;
+        updated.boosted = false;
+      }
+      return updated;
+    })
   );
+
   setPlayedLand(false);
   setHasDrawnCard(false);
 

@@ -1,4 +1,3 @@
-// src/context/GameProvider.jsx
 
 import { useState, useEffect, useRef } from "react";
 import GameContext from "./GameContext";
@@ -11,7 +10,7 @@ import {
 } from "../data/cards";
 import { createDualColorDeck } from "../data/deckbuilder";
 import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerActions";
-import { runOpponentTurn } from "./OpponentAI";
+import { runOpponentTurn } from "./OpponentAI/index.js";
 import { getStateForActions } from "./getStateForActions";
 
 // 🎯 Default placeholder decks
@@ -101,10 +100,20 @@ export default function GameProvider({ children }) {
     setLog(prev => [...prev, "➡️ You ended your turn."]);
     currentTurn.current = "opponent";
     setIsPlayerTurn(false);
+
     setTimeout(() => {
       if (!isRunningCPU.current) {
         isRunningCPU.current = true;
-        runOpponentTurn(getStateForActions(contextValues));
+
+        runOpponentTurn(getStateForActions(contextValues), () => {
+          setTimeout(() => {
+            setTurnCount(prev => prev + 1);
+            currentTurn.current = "player";
+            hasStartedTurn.current = false;
+            isRunningCPU.current = false;
+            setIsPlayerTurn(true);
+          }, 300);
+        });
       }
     }, 300);
   }
