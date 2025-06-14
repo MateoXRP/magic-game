@@ -1,3 +1,5 @@
+// src/context/OpponentAI/index.js
+
 import { castSpells } from "./phases/castSpells";
 import { summonCreature } from "./phases/summonCreature";
 import { declareAttackers } from "./phases/declareAttackers";
@@ -17,13 +19,12 @@ export function runOpponentTurn(state, onComplete = () => {}) {
     setGraveyard,
     setOpponentMana,
     setOpponentPlayedLand,
-    setLog,
+    setPlayerLife,
+    setOpponentLife,
     playerBattlefield,
     setPlayerBattlefield,
-    setPlayerLife,
+    setLog,
     gameOver,
-    setBlockingPhase,
-    setDeclaredAttackers,
   } = state;
 
   if (gameOver) return;
@@ -34,7 +35,7 @@ export function runOpponentTurn(state, onComplete = () => {}) {
     let library = [...opponentLibrary];
     let battlefield = [...opponentBattlefield];
     let graveyard = [];
-    let mana = 0;
+    let mana = { red: 0, green: 0, blue: 0, white: 0, black: 0 };
     let playedLand = false;
     let updatedPlayerBattlefield = [...playerBattlefield];
     let tookAction = false;
@@ -92,10 +93,10 @@ export function runOpponentTurn(state, onComplete = () => {}) {
       }
 
       try {
-        const summonResult = summonCreature(hand, battlefield, mana);
+        const summonResult = summonCreature(hand, battlefield, Object.values(mana).reduce((a, b) => a + b, 0));
         hand = summonResult.hand;
         battlefield = summonResult.battlefield;
-        mana = summonResult.mana;
+        // mana object may remain the same; no deduction for color here
         if (summonResult.log) {
           logMessages.push(summonResult.log);
           tookAction = true;
@@ -116,27 +117,19 @@ export function runOpponentTurn(state, onComplete = () => {}) {
         logMessages.push(`🛑 declareAttackers error: ${err.message}`);
       }
 
-      // ✅ Instead of applying damage directly, set up the blocking phase
       if (totalDamage > 0) {
-        const attackers = battlefield.filter(c => c.attacking).map(c => c.id);
-        setBlockingPhase(true);
-        setDeclaredAttackers(attackers);
-        setOpponentHand(hand);
-        setOpponentLibrary(library);
-        setOpponentBattlefield(battlefield);
-        setGraveyard(prev => [...prev, ...graveyard]);
-        setOpponentMana(mana);
-        setOpponentPlayedLand(playedLand);
-        setPlayerBattlefield(updatedPlayerBattlefield);
-        setLog(prev => [...prev, ...logMessages]);
-        return; // ✅ Wait for player to resolve combat
+        try {
+          setPlayerLife(prev => Math.max(0, prev - totalDamage));
+        } catch (err) {
+          logMessages.push(`🛑 damage application error: ${err.message}`);
+        }
       }
 
       if (!tookAction) {
         logMessages.push(`🤖 Opponent takes no actions this turn.`);
       }
 
-      // ✅ Final state update
+      // ✅ State updates
       setPlayerBattlefield(updatedPlayerBattlefield);
       setOpponentHand(hand);
       setOpponentLibrary(library);

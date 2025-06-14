@@ -1,3 +1,4 @@
+// src/context/GameProvider.jsx
 
 import { useState, useEffect, useRef } from "react";
 import GameContext from "./GameContext";
@@ -60,7 +61,13 @@ export default function GameProvider({ children }) {
 
   const [opponentHand, setOpponentHand] = useState(initialOpponentHand);
   const [opponentLibrary, setOpponentLibrary] = useState(initialOpponentLibrary);
-  const [opponentMana, setOpponentMana] = useState(0);
+  const [opponentMana, setOpponentMana] = useState({
+    red: 0,
+    green: 0,
+    blue: 0,
+    white: 0,
+    black: 0,
+  });
   const [opponentPlayedLand, setOpponentPlayedLand] = useState(false);
 
   const [selectedTarget, setSelectedTarget] = useState(null);
@@ -134,13 +141,13 @@ export default function GameProvider({ children }) {
     setOpponentBattlefield([]);
     setGraveyard([]);
     setManaPool({ red: 0, green: 0, blue: 0, white: 0, black: 0 });
+    setOpponentMana({ red: 0, green: 0, blue: 0, white: 0, black: 0 });
     setPlayedLand(false);
     setHasDrawnCard(false);
     setIsPlayerTurn(true);
     setTurnCount(1);
     setPlayerLifeState(20);
     setOpponentLifeState(20);
-    setOpponentMana(0);
     setOpponentPlayedLand(false);
     setSelectedTarget(null);
     setPendingSpell(null);
@@ -166,6 +173,7 @@ export default function GameProvider({ children }) {
     setOpponentBattlefield([]);
     setGraveyard([]);
     setManaPool({ red: 0, green: 0, blue: 0, white: 0, black: 0 });
+    setOpponentMana({ red: 0, green: 0, blue: 0, white: 0, black: 0 });
 
     setPlayedLand(false);
     setHasDrawnCard(false);
