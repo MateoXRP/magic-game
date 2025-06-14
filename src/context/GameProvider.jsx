@@ -13,8 +13,8 @@ import { createDualColorDeck } from "../data/deckbuilder";
 import { playCard, startTurn, declareAttacker, resolveCombat } from "./PlayerActions";
 import { runOpponentTurn } from "./OpponentAI/index.js";
 import { getStateForActions } from "./getStateForActions";
+import useBlockerAI from "./OpponentAI/useBlockerAI"; // ✅ NEW
 
-// 🎯 Default placeholder decks
 const playerDeckChoice = createDualColorDeck(blueDeck, whiteDeck);
 const opponentDeckChoice = createDualColorDeck(redDeck, greenDeck);
 
@@ -282,6 +282,9 @@ export default function GameProvider({ children }) {
     setPlayerColors,
     resetGameState,
   };
+
+  // ✅ CPU blocking phase hook
+  useBlockerAI(getStateForActions(contextValues));
 
   return (
     <GameContext.Provider value={contextValues}>
