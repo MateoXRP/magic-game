@@ -18,10 +18,8 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
     for (const spell of playableSpells) {
       let target = null;
 
-      // Deduct mana (1 of its own color, rest from any)
       let newMana = { ...updatedMana };
       newMana[spell.color]--;
-
       let remaining = spell.manaCost - 1;
       for (const color of Object.keys(newMana)) {
         while (remaining > 0 && newMana[color] > 0) {
@@ -45,14 +43,18 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
             logs.push(`☠️ ${target.name} is destroyed.`);
             updatedPlayerBattlefield = updatedPlayerBattlefield.filter(c => c.id !== target.id);
           }
-        } else {
+        } else if (turnCount > 10) {
           logs.push(`⚡ Opponent casts Lightning Bolt directly at player.`);
+          playerLife -= 3;
+        } else {
+          logs.push(`⚡ Opponent holds Lightning Bolt (no valid target).`);
+          continue;
         }
       }
 
       if (spell.name === "Giant Growth") {
         const candidates = updatedBattlefield.filter(c => c.type === "creature" && !c.tapped);
-        target = candidates.find(c => c.attack <= 2 || c.tempAttack); // Buff weakest attacker
+        target = candidates.find(c => c.attack <= 2 || c.tempAttack);
 
         if (target) {
           logs.push(`🌿 Opponent casts Giant Growth on ${target.name}.`);
@@ -69,7 +71,10 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
 
         if (targetCount >= 2) {
           logs.push(`☠️ Opponent casts Pestilence, dealing ${targetCount} damage to the player.`);
-          opponentLife -= targetCount;
+          playerLife -= targetCount;
+        } else if (turnCount > 10 && targetCount > 0) {
+          logs.push(`☠️ Opponent casts Pestilence, forcing damage late-game.`);
+          playerLife -= targetCount;
         } else {
           logs.push(`☠️ Opponent holds Pestilence (not enough creatures to punish).`);
           continue;
@@ -86,7 +91,7 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
 
         const totalLands = Object.values(landCounts).reduce((a, b) => a + b, 0);
 
-        if (totalLands <= 3 && opponentLibrary.length >= 30) {
+        if (totalLands <= 3) {
           const [colorToHit] = Object.entries(landCounts).sort((a, b) => a[1] - b[1])[0] || [];
 
           if (colorToHit) {
@@ -113,7 +118,10 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
 
       if (spell.name === "Holy Water") {
         const otherOptions = playableSpells.filter(s => s.name !== "Holy Water");
-        if (opponentLife <= 10 && otherOptions.length <= 1) {
+        if (
+          opponentLife < 20 &&
+          (opponentLife <= 10 || otherOptions.length === 0 || turnCount > 10)
+        ) {
           logs.push(`💧 Opponent casts Holy Water to heal.`);
           opponentLife += 3;
         } else {
@@ -125,6 +133,22 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
       updatedMana = newMana;
       graveyard.push(spell);
       updatedHand = updatedHand.filter(c => c.id !== spell.id);
+    }
+
+    // Late-game fallback logic
+    if (turnCount > 10 && updatedHand.every(c => c.type === "spell")) {
+      const remaining = updatedHand.find(spell => {
+        if (spell.name === "Lightning Bolt") return true;
+        if (spell.name === "Pestilence") return updatedPlayerBattlefield.length > 0;
+        if (spell.name === "Tsunami") return updatedPlayerBattlefield.some(c => c.type === "land");
+        if (spell.name === "Giant Growth") return updatedBattlefield.some(c => c.type === "creature" && !c.tapped);
+        if (spell.name === "Holy Water") return opponentLife < 20;
+        return false;
+      });
+
+      if (remaining) {
+        logs.push(`⏳ Late game fallback: opponent casts ${remaining.name} to avoid stall.`);
+      }
     }
 
     if (logs.length === 0) {
@@ -143,6 +167,5 @@ export function castSpells(hand, battlefield, playerBattlefield, mana, playerLif
     graveyard,
     mana: updatedMana,
     logs,
-    opponentLife, // ✅ Return the updated life total if changed
   };
 }
