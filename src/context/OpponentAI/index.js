@@ -24,6 +24,8 @@ export function runOpponentTurn(state, onComplete = () => {}) {
     playerBattlefield,
     setPlayerBattlefield,
     setLog,
+    setDeclaredAttackers,
+    setBlockingPhase,
     gameOver,
   } = state;
 
@@ -96,7 +98,6 @@ export function runOpponentTurn(state, onComplete = () => {}) {
         const summonResult = summonCreature(hand, battlefield, Object.values(mana).reduce((a, b) => a + b, 0));
         hand = summonResult.hand;
         battlefield = summonResult.battlefield;
-        // mana object may remain the same; no deduction for color here
         if (summonResult.log) {
           logMessages.push(summonResult.log);
           tookAction = true;
@@ -109,9 +110,33 @@ export function runOpponentTurn(state, onComplete = () => {}) {
         const attackResult = declareAttackers(battlefield);
         battlefield = attackResult.battlefield;
         totalDamage = attackResult.totalDamage;
+
         if (attackResult.log) {
           logMessages.push(attackResult.log);
-          if (totalDamage > 0) tookAction = true;
+
+          if (totalDamage > 0) {
+            tookAction = true;
+
+            // ✅ Enable player blocking phase
+            const attackerIds = battlefield
+              .filter(c => c.attacking)
+              .map(c => c.id);
+
+            setDeclaredAttackers(attackerIds);
+            setBlockingPhase(true);
+
+            // Pause opponent turn, resume in resolveCombat
+            setOpponentHand(hand);
+            setOpponentLibrary(library);
+            setOpponentBattlefield(battlefield);
+            setGraveyard(prev => [...prev, ...graveyard]);
+            setOpponentMana(mana);
+            setOpponentPlayedLand(playedLand);
+            setLog(prev => [...prev, ...logMessages]);
+            setPlayerBattlefield(updatedPlayerBattlefield);
+
+            return; // End turn here — blocking/combat continues separately
+          }
         }
       } catch (err) {
         logMessages.push(`🛑 declareAttackers error: ${err.message}`);
