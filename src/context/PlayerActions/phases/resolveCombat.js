@@ -5,4 +5,3 @@ import { resolveCombatPhase } from "../../../engine/combatEngine";
 export function resolveCombat(state) {
   resolveCombatPhase(state);
 }
-

@@ -1,6 +1,6 @@
 // src/context/OpponentAI/phases/castSpells.js
 
-export function castSpells(hand, battlefield, playerBattlefield, mana) {
+export function castSpells(hand, battlefield, playerBattlefield, mana, playerLife = 20, opponentLife = 20, opponentLibrary = [], turnCount = 1) {
   const logs = [];
   const graveyard = [];
   let updatedBattlefield = [...battlefield];
@@ -11,8 +11,8 @@ export function castSpells(hand, battlefield, playerBattlefield, mana) {
   try {
     const playableSpells = hand.filter(c => {
       if (c.type !== "spell" || !c.manaCost || !c.color) return false;
-      const total = Object.values(mana).reduce((a, b) => a + b, 0);
-      return mana[c.color] > 0 && total >= c.manaCost;
+      const total = Object.values(updatedMana).reduce((a, b) => a + b, 0);
+      return updatedMana[c.color] > 0 && total >= c.manaCost;
     });
 
     for (const spell of playableSpells) {
@@ -30,14 +30,12 @@ export function castSpells(hand, battlefield, playerBattlefield, mana) {
         }
       }
 
-      // Only proceed if we had enough mana
       if (remaining > 0) continue;
 
       if (spell.name === "Lightning Bolt") {
         const targets = updatedPlayerBattlefield
           .filter(c => c.type === "creature")
-          .sort((a, b) => b.attack - a.attack);
-
+          .sort((a, b) => (b.tempAttack || b.attack) - (a.tempAttack || a.attack));
         target = targets[0];
 
         if (target) {
@@ -49,24 +47,76 @@ export function castSpells(hand, battlefield, playerBattlefield, mana) {
           }
         } else {
           logs.push(`⚡ Opponent casts Lightning Bolt directly at player.`);
-          // Damage to player handled in index.js
         }
       }
 
-      if (spell.name === "Holy Water") {
-        logs.push(`💧 Opponent casts Holy Water.`);
-        // Healing handled in index.js
-      }
-
       if (spell.name === "Giant Growth") {
-        const targets = updatedBattlefield.filter(c => c.type === "creature" && !c.tapped);
-        target = targets[0];
+        const candidates = updatedBattlefield.filter(c => c.type === "creature" && !c.tapped);
+        target = candidates.find(c => c.attack <= 2 || c.tempAttack); // Buff weakest attacker
+
         if (target) {
           logs.push(`🌿 Opponent casts Giant Growth on ${target.name}.`);
           target.tempAttack = (target.tempAttack || 0) + 3;
           target.tempDefense = (target.tempDefense || 0) + 3;
         } else {
-          logs.push(`🌿 Opponent holds Giant Growth (no target).`);
+          logs.push(`🌿 Opponent holds Giant Growth (no valid target).`);
+          continue;
+        }
+      }
+
+      if (spell.name === "Pestilence") {
+        const targetCount = updatedPlayerBattlefield.filter(c => c.type === "creature").length;
+
+        if (targetCount >= 2) {
+          logs.push(`☠️ Opponent casts Pestilence, dealing ${targetCount} damage to the player.`);
+          state.setPlayerLife(prev => Math.max(0, prev - targetCount));
+        } else {
+          logs.push(`☠️ Opponent holds Pestilence (not enough creatures to punish).`);
+          continue;
+        }
+      }
+
+      if (spell.name === "Tsunami") {
+        const landCounts = updatedPlayerBattlefield
+          .filter(c => c.type === "land")
+          .reduce((acc, c) => {
+            acc[c.color] = (acc[c.color] || 0) + 1;
+            return acc;
+          }, {});
+
+        const totalLands = Object.values(landCounts).reduce((a, b) => a + b, 0);
+
+        if (totalLands <= 3 && opponentLibrary.length >= 30) {
+          const [colorToHit] = Object.entries(landCounts).sort((a, b) => a[1] - b[1])[0] || [];
+
+          if (colorToHit) {
+            const landToDestroy = updatedPlayerBattlefield.find(
+              c => c.type === "land" && c.color === colorToHit
+            );
+
+            if (landToDestroy) {
+              logs.push(`🌊 Opponent casts Tsunami, destroying 1 ${landToDestroy.name}.`);
+              updatedPlayerBattlefield = updatedPlayerBattlefield.filter(c => c.id !== landToDestroy.id);
+            } else {
+              logs.push(`🌊 Opponent holds Tsunami (no valid target).`);
+              continue;
+            }
+          } else {
+            logs.push(`🌊 Opponent holds Tsunami (no valid target).`);
+            continue;
+          }
+        } else {
+          logs.push(`🌊 Opponent holds Tsunami (too late to slow player).`);
+          continue;
+        }
+      }
+
+      if (spell.name === "Holy Water") {
+        const otherOptions = playableSpells.filter(s => s.name !== "Holy Water");
+        if (opponentLife <= 10 && otherOptions.length <= 1) {
+          logs.push(`💧 Opponent casts Holy Water to heal.`);
+        } else {
+          logs.push(`💧 Opponent holds Holy Water (not needed).`);
           continue;
         }
       }

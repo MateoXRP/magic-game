@@ -27,6 +27,9 @@ export function runOpponentTurn(state, onComplete = () => {}) {
     setDeclaredAttackers,
     setBlockingPhase,
     gameOver,
+    playerLife,
+    opponentLife,
+    turnCount,
   } = state;
 
   if (gameOver) return;
@@ -67,7 +70,17 @@ export function runOpponentTurn(state, onComplete = () => {}) {
       mana = manaResult.mana;
       logMessages.push(manaResult.log);
 
-      const spellResult = castSpells(hand, battlefield, updatedPlayerBattlefield, mana);
+      const spellResult = castSpells(
+        hand,
+        battlefield,
+        updatedPlayerBattlefield,
+        mana,
+        playerLife,
+        opponentLife,
+        library,
+        turnCount
+      );
+
       hand = spellResult.hand;
       battlefield = spellResult.battlefield;
       updatedPlayerBattlefield = spellResult.updatedPlayerBattlefield;
@@ -84,7 +97,7 @@ export function runOpponentTurn(state, onComplete = () => {}) {
         tookAction = true;
       }
 
-      const attackResult = declareAttackers(battlefield);
+      const attackResult = declareAttackers(battlefield, updatedPlayerBattlefield);
       battlefield = attackResult.battlefield;
       totalDamage = attackResult.totalDamage;
 

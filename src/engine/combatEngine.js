@@ -1,5 +1,5 @@
 // src/engine/combatEngine.js
-import { getEffectiveAttack } from "../utils";
+import { getEffectiveAttack, getEffectiveDefense } from "../utils";
 
 export function resolveCombatPhase(state) {
   const {
@@ -38,15 +38,18 @@ export function resolveCombatPhase(state) {
 
       if (blockerId && blocker) {
         const attackerPower = getEffectiveAttack(attacker, updatedOpponent);
+        const attackerToughness = getEffectiveDefense(attacker, updatedOpponent);
+
         const blockerPower = getEffectiveAttack(blocker, updatedPlayer);
+        const blockerToughness = getEffectiveDefense(blocker, updatedPlayer);
 
         attacker.damageTaken = blockerPower;
         blocker.damageTaken = attackerPower;
 
         setLog(prev => [...prev, `🛡️ ${blocker.name} blocks ${attacker.name}.`]);
 
-        if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
-        if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
+        if (attacker.damageTaken >= attackerToughness) grave.push(attacker);
+        if (blocker.damageTaken >= blockerToughness) grave.push(blocker);
       } else if (blockerId) {
         setLog(prev => [...prev, `⚰️ ${attacker.name} was blocked, but blocker is gone.`]);
       } else {
@@ -65,15 +68,18 @@ export function resolveCombatPhase(state) {
       const blocker = blockers.shift();
       if (blocker) {
         const attackerPower = getEffectiveAttack(attacker, updatedPlayer);
+        const attackerToughness = getEffectiveDefense(attacker, updatedPlayer);
+
         const blockerPower = getEffectiveAttack(blocker, updatedOpponent);
+        const blockerToughness = getEffectiveDefense(blocker, updatedOpponent);
 
         attacker.damageTaken = blockerPower;
         blocker.damageTaken = attackerPower;
         blocker.tapped = true;
         blocker.blocking = attacker.id;
 
-        if (attacker.damageTaken >= attacker.defense) grave.push(attacker);
-        if (blocker.damageTaken >= blocker.defense) grave.push(blocker);
+        if (attacker.damageTaken >= attackerToughness) grave.push(attacker);
+        if (blocker.damageTaken >= blockerToughness) grave.push(blocker);
 
         setLog(prev => [...prev, `🛡️ ${blocker.name} blocked ${attacker.name}.`]);
       } else {
