@@ -17,12 +17,13 @@ export function runOpponentTurn(state, onComplete = () => {}) {
     setGraveyard,
     setOpponentMana,
     setOpponentPlayedLand,
-    setPlayerLife,
-    setOpponentLife,
+    setLog,
     playerBattlefield,
     setPlayerBattlefield,
-    setLog,
+    setPlayerLife,
     gameOver,
+    setBlockingPhase,
+    setDeclaredAttackers,
   } = state;
 
   if (gameOver) return;
@@ -115,19 +116,27 @@ export function runOpponentTurn(state, onComplete = () => {}) {
         logMessages.push(`🛑 declareAttackers error: ${err.message}`);
       }
 
+      // ✅ Instead of applying damage directly, set up the blocking phase
       if (totalDamage > 0) {
-        try {
-          setPlayerLife(prev => Math.max(0, prev - totalDamage));
-        } catch (err) {
-          logMessages.push(`🛑 damage application error: ${err.message}`);
-        }
+        const attackers = battlefield.filter(c => c.attacking).map(c => c.id);
+        setBlockingPhase(true);
+        setDeclaredAttackers(attackers);
+        setOpponentHand(hand);
+        setOpponentLibrary(library);
+        setOpponentBattlefield(battlefield);
+        setGraveyard(prev => [...prev, ...graveyard]);
+        setOpponentMana(mana);
+        setOpponentPlayedLand(playedLand);
+        setPlayerBattlefield(updatedPlayerBattlefield);
+        setLog(prev => [...prev, ...logMessages]);
+        return; // ✅ Wait for player to resolve combat
       }
 
       if (!tookAction) {
         logMessages.push(`🤖 Opponent takes no actions this turn.`);
       }
 
-      // ✅ State updates
+      // ✅ Final state update
       setPlayerBattlefield(updatedPlayerBattlefield);
       setOpponentHand(hand);
       setOpponentLibrary(library);

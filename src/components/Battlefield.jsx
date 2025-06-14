@@ -1,4 +1,3 @@
-// src/components/Battlefield.jsx
 import { useGame } from "../context/GameContext";
 import { useState, useEffect } from "react";
 import Card from "./Card";
@@ -18,6 +17,7 @@ export default function Battlefield() {
     blockAssignments,
     setBlockAssignments,
     pendingSpell,
+    resolveCombat,
   } = game;
 
   const [selectedBlocker, setSelectedBlocker] = useState(null);
@@ -31,7 +31,7 @@ export default function Battlefield() {
       pendingSpell &&
       isValidTarget(card, pendingSpell.targetType, playerBattlefield, opponentBattlefield)
     ) {
-      resolveSpell(card.id, game); // ✅ pass full context
+      resolveSpell(card.id, game);
       return;
     }
 
@@ -67,9 +67,10 @@ export default function Battlefield() {
 
   function assignBlock(attackerId) {
     if (!selectedBlocker) return;
+    // ✅ Correct shape: blockerId → attackerId
     setBlockAssignments(prev => ({
       ...prev,
-      [attackerId]: selectedBlocker,
+      [selectedBlocker]: attackerId,
     }));
     setSelectedBlocker(null);
   }
@@ -110,7 +111,7 @@ export default function Battlefield() {
               onClick={() => handleClick(card)}
               battlefield={playerBattlefield}
               isSelected={selectedBlocker === card.id}
-              isAssigned={Object.values(blockAssignments).includes(card.id)}
+              isAssigned={Object.keys(blockAssignments).includes(card.id)}
               isAttacking={card.attacking}
               isTargetable={
                 pendingSpell &&
@@ -141,6 +142,20 @@ export default function Battlefield() {
               })}
             </div>
           </>
+        )}
+
+        {blockingPhase && (
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={() => {
+                console.log("🛡️ Resolving combat with blockAssignments:", blockAssignments);
+                resolveCombat();
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            >
+              ✅ Resolve Combat
+            </button>
+          </div>
         )}
       </div>
     </div>

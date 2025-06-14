@@ -34,7 +34,11 @@ export function resolveCombatPhase(state) {
       const attacker = updatedOpponent.find(c => c.id === attackerId);
       if (!attacker) return;
 
-      const blockerId = blockAssignments[attackerId];
+      // ✅ Fix: correctly find blocker assigned to this attacker
+      const blockerId = Object.entries(blockAssignments).find(
+        ([, v]) => v === attackerId
+      )?.[0];
+
       const blocker = blockerId ? updatedPlayer.find(c => c.id === blockerId) : null;
 
       if (blockerId && blocker) {
@@ -124,4 +128,3 @@ export function resolveCombatPhase(state) {
     }
   }
 }
-

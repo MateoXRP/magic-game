@@ -1,5 +1,3 @@
-// src/components/Controls.jsx
-
 import { useGame } from "../context/GameContext";
 
 export default function Controls() {
@@ -10,7 +8,6 @@ export default function Controls() {
     resolveCombat,
     playerLife,
     opponentLife,
-    blockingPhase,
     playerColors,
   } = useGame();
 
@@ -25,14 +22,7 @@ export default function Controls() {
   return (
     <div className="flex justify-center mt-6">
       <div className="space-y-4 w-full max-w-3xl text-center">
-        {blockingPhase ? (
-          <button
-            onClick={resolveCombat}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-          >
-            🛡 Resolve Block
-          </button>
-        ) : isPlayerTurn ? (
+        {isPlayerTurn && (
           <div className="flex flex-wrap justify-center gap-2">
             <button
               onClick={resolveCombat}
@@ -47,7 +37,7 @@ export default function Controls() {
               End Turn
             </button>
           </div>
-        ) : null}
+        )}
 
         <div className="mt-2 text-white text-sm">
           {playerColors.map(color => (
