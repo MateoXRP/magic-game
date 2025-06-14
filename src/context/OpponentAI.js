@@ -106,29 +106,38 @@ function runOpponentTurnStep2(state) {
     return acc;
   }, {});
 
-  let usedColorCount = {};
-  let manaNeeded = 0;
-  const chosenCards = [];
-
   const hasOpponentCreatures = playerBattlefield.some(c => c.type === "creature");
   const hasOpponentLands = playerBattlefield.some(c => c.type === "land");
-  const hasOwnCreatures = battlefield.some(c => c.type === "creature");
+  const ownCreatures = battlefield.filter(c => c.type === "creature");
+  const hasOwnCreatures = ownCreatures.length > 0;
 
+  // Recalculate playable cards based on fresh state
   function isValidSpell(card) {
     if (!card.targetType) {
       if (card.name === "Pestilence") return hasOpponentCreatures;
       return true;
     }
     if (card.name === "Giant Growth") return hasOwnCreatures;
-    if (card.name === "Tsunami") return hasOpponentLands;
+    if (card.name === "Tsunami") {
+      const lands = playerBattlefield.filter(c => c.type === "land");
+      return lands.length > 0 && lands.length <= 2; // ✅ Only if it can stall early
+    }
     return true;
   }
 
-  const playableCards = hand
-    .filter(c => (c.type === "creature" || c.type === "spell") && isValidSpell(c))
-    .sort((a, b) => (a.type === "creature" ? -1 : 1));
+  // New selection loop: prioritize creatures early if board is light
+  let chosenCards = [];
+  let manaNeeded = 0;
+  let usedColorCount = {};
 
-  for (const card of playableCards) {
+  const playable = hand
+    .filter(c => (c.type === "creature" || c.type === "spell") && isValidSpell(c))
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === "creature" ? -1 : 1;
+      return a.manaCost - b.manaCost;
+    });
+
+  for (const card of playable) {
     const color = card.color;
     const colorAvailable = (colorCounts[color] || 0) - (usedColorCount[color] || 0);
     if (colorAvailable >= 1 && manaNeeded + card.manaCost <= availableLands.length) {
@@ -138,6 +147,7 @@ function runOpponentTurnStep2(state) {
     }
   }
 
+  // Tap lands
   let manaGenerated = 0;
   for (const land of battlefield) {
     if (!land.tapped && manaGenerated < manaNeeded) {
@@ -222,7 +232,6 @@ function runOpponentTurnStep2(state) {
   setGraveyard(prev => [...prev, ...newGraveyard]);
   newLog.forEach(msg => setLog(prev => [...prev, msg]));
 
-  // ✅ SMART ATTACK LOGIC
   const untappedAttackers = newBattlefield.filter(c => c.type === "creature" && !c.tapped);
   const untappedDefenders = playerBattlefield.filter(c => c.type === "creature" && !c.tapped);
 
@@ -245,7 +254,6 @@ function runOpponentTurnStep2(state) {
     return;
   }
 
-  // No attacks — pass turn
   setLog(prev => [...prev, `🕒 Opponent ends turn without attacking.`]);
   setOpponentBattlefield([...newBattlefield]);
 
