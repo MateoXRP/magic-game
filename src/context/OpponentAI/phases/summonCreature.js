@@ -1,27 +1,37 @@
 // src/context/OpponentAI/phases/summonCreature.js
 
 export function summonCreature(hand, battlefield, mana) {
-  const creature = hand.find(c => c.type === "creature" && (c.manaCost || 0) <= mana);
-  if (!creature) {
-    return { hand, battlefield, mana, log: null };
-  }
+  let updatedHand = [...hand];
+  let updatedBattlefield = [...battlefield];
+  let availableMana = mana;
+  const logs = [];
 
-  const updatedBattlefield = [
-    ...battlefield,
-    {
+  // Sort creatures by mana cost descending to prioritize strongest
+  const creatures = updatedHand
+    .filter(c => c.type === "creature" && (c.manaCost || 0) <= availableMana)
+    .sort((a, b) => (b.manaCost || 0) - (a.manaCost || 0));
+
+  for (const creature of creatures) {
+    const cost = creature.manaCost || 0;
+    if (cost > availableMana) continue;
+
+    // Summon creature
+    updatedBattlefield.push({
       ...creature,
       tapped: false,
       attacking: false,
       blocking: null,
       damageTaken: 0,
-    },
-  ];
+    });
+    updatedHand = updatedHand.filter(c => c.id !== creature.id);
+    availableMana -= cost;
+    logs.push(`🧙 Opponent summons ${creature.name} (${creature.attack}/${creature.defense}).`);
+  }
 
   return {
-    hand: hand.filter(c => c.id !== creature.id),
+    hand: updatedHand,
     battlefield: updatedBattlefield,
-    mana: mana - (creature.manaCost || 0),
-    log: `🧙 Opponent summons ${creature.name} (${creature.attack}/${creature.defense}).`,
+    mana: availableMana,
+    log: logs.length > 0 ? logs.join("\n") : null,
   };
 }
-
