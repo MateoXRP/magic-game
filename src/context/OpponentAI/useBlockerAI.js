@@ -13,12 +13,13 @@ export default function useBlockerAI(state) {
     setBlockAssignments,
     setBlockingPhase,
     setLog,
+    opponentLife,
   } = state;
 
   const hasBlocked = useRef(false);
 
   useEffect(() => {
-    // Only run CPU blocker logic when PLAYER is attacking
+    // CPU blocking phase only triggers during PLAYER's attack
     if (blockingPhase && isPlayerTurn && !hasBlocked.current) {
       hasBlocked.current = true;
 
@@ -26,7 +27,7 @@ export default function useBlockerAI(state) {
         const attackers = opponentBattlefield.filter(c => declaredAttackers.includes(c.id));
         const blockers = playerBattlefield;
 
-        const assignments = assignBlocks(attackers, blockers);
+        const assignments = assignBlocks(attackers, blockers, opponentLife);
         const logMessages = [];
 
         if (Object.keys(assignments).length === 0) {
@@ -48,5 +49,5 @@ export default function useBlockerAI(state) {
         hasBlocked.current = false;
       }, 600);
     }
-  }, [blockingPhase, isPlayerTurn, declaredAttackers, playerBattlefield, opponentBattlefield]);
+  }, [blockingPhase, isPlayerTurn, declaredAttackers, playerBattlefield, opponentBattlefield, opponentLife]);
 }

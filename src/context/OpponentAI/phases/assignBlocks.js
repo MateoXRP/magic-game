@@ -4,46 +4,49 @@ export function assignBlocks(playerAttackers, cpuBattlefield, cpuLife = 20) {
   const blockers = cpuBattlefield.filter(c => c.type === "creature" && !c.tapped && !c.attacking);
   const blockAssignments = {};
   const usedBlockers = new Set();
+  const usedAttackers = new Set();
 
-  // Sort attackers by descending power
-  const sortedAttackers = [...playerAttackers].sort(
-    (a, b) => ((b.tempAttack || 0) + b.attack) - ((a.tempAttack || 0) + a.attack)
-  );
+  const getAttack = (c) => (c.tempAttack || 0) + c.attack;
+  const getDefense = (c) => (c.tempDefense || 0) + c.defense;
 
-  for (const attacker of sortedAttackers) {
-    const potentialBlockers = blockers.filter(b => !usedBlockers.has(b.id));
-    const attackerAttack = (attacker.tempAttack || 0) + attacker.attack;
-    const attackerDefense = (attacker.tempDefense || 0) + attacker.defense;
+  const attackers = [...playerAttackers].filter(c => c.type === "creature");
 
-    // 1. Ideal block: kill attacker and survive
-    let blocker = potentialBlockers.find(b => {
-      const bAtk = (b.tempAttack || 0) + b.attack;
-      const bDef = (b.tempDefense || 0) + b.defense;
-      return bAtk >= attackerDefense && bDef > attackerAttack;
-    });
+  // Score matrix: [{ blockerId, attackerId, damagePrevented }]
+  const scores = [];
 
-    // 2. Trade: both die
-    if (!blocker) {
-      blocker = potentialBlockers.find(b => {
-        const bAtk = (b.tempAttack || 0) + b.attack;
-        return bAtk >= attackerDefense;
+  for (const blocker of blockers) {
+    const bAtk = getAttack(blocker);
+    const bDef = getDefense(blocker);
+
+    for (const attacker of attackers) {
+      const aAtk = getAttack(attacker);
+      const aDef = getDefense(attacker);
+
+      let damagePrevented = aAtk;
+
+      // If attacker dies before doing damage, even better
+      if (bAtk >= aDef) {
+        damagePrevented = aAtk;
+      }
+
+      // Always track how much damage would be stopped by this block
+      scores.push({
+        blockerId: blocker.id,
+        attackerId: attacker.id,
+        damagePrevented,
       });
     }
+  }
 
-    // 3. Chump block: prevent high damage or lethal
-    if (!blocker && attackerAttack >= 3) {
-      blocker = potentialBlockers[0]; // Any available blocker
-    }
+  // Sort score matrix by descending damage prevented
+  scores.sort((a, b) => b.damagePrevented - a.damagePrevented);
 
-    // 4. Emergency block to prevent lethal
-    if (!blocker && attackerAttack >= cpuLife) {
-      blocker = potentialBlockers[0];
-    }
+  for (const { blockerId, attackerId } of scores) {
+    if (usedBlockers.has(blockerId) || usedAttackers.has(attackerId)) continue;
 
-    if (blocker) {
-      blockAssignments[attacker.id] = blocker.id;
-      usedBlockers.add(blocker.id);
-    }
+    blockAssignments[attackerId] = blockerId;
+    usedBlockers.add(blockerId);
+    usedAttackers.add(attackerId);
   }
 
   return blockAssignments;
