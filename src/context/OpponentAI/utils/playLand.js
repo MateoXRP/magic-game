@@ -1,15 +1,28 @@
 // src/context/OpponentAI/phases/playLand.js
 
 export function playLand(hand, battlefield) {
-  const landIndex = hand.findIndex(c => c.type === "land");
+  // Identify colors already on the battlefield
+  const currentColors = new Set(
+    battlefield.filter(c => c.type === "land").map(c => c.color)
+  );
 
-  if (landIndex === -1) {
+  // Prefer lands that add new colors
+  let prioritizedIndex = hand.findIndex(c =>
+    c.type === "land" && !currentColors.has(c.color)
+  );
+
+  // Fallback: just play any land
+  if (prioritizedIndex === -1) {
+    prioritizedIndex = hand.findIndex(c => c.type === "land");
+  }
+
+  if (prioritizedIndex === -1) {
     return { hand, battlefield, playedLand: false };
   }
 
-  const landCard = hand[landIndex];
+  const landCard = hand[prioritizedIndex];
   const updatedHand = [...hand];
-  updatedHand.splice(landIndex, 1);
+  updatedHand.splice(prioritizedIndex, 1);
 
   const updatedBattlefield = [...battlefield, { ...landCard, tapped: false }];
   const log = `🪨 Opponent plays ${landCard.name}.`;
@@ -18,6 +31,6 @@ export function playLand(hand, battlefield) {
     hand: updatedHand,
     battlefield: updatedBattlefield,
     playedLand: true,
-    log
+    log,
   };
 }
