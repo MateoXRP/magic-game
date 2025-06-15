@@ -2,51 +2,64 @@
 
 export function assignBlocks(playerAttackers, cpuBattlefield, cpuLife = 20) {
   const blockers = cpuBattlefield.filter(c => c.type === "creature" && !c.tapped && !c.attacking);
+  const attackers = [...playerAttackers].filter(c => c.type === "creature");
+
   const blockAssignments = {};
-  const usedBlockers = new Set();
-  const usedAttackers = new Set();
+  const assignedAttackers = new Set();
+  const assignedBlockers = new Set();
 
   const getAttack = (c) => (c.tempAttack || 0) + c.attack;
   const getDefense = (c) => (c.tempDefense || 0) + c.defense;
 
-  const attackers = [...playerAttackers].filter(c => c.type === "creature");
+  const totalUnblockedDamage = attackers.reduce((sum, a) => sum + getAttack(a), 0);
 
-  // Score matrix: [{ blockerId, attackerId, damagePrevented }]
-  const scores = [];
+  // Build a score list of all possible blocker-attacker pairs
+  const scoreMatrix = [];
 
   for (const blocker of blockers) {
     const bAtk = getAttack(blocker);
     const bDef = getDefense(blocker);
 
     for (const attacker of attackers) {
+      const aId = attacker.id;
       const aAtk = getAttack(attacker);
       const aDef = getDefense(attacker);
 
-      let damagePrevented = aAtk;
+      let score = aAtk; // base score = damage prevented
 
-      // If attacker dies before doing damage, even better
-      if (bAtk >= aDef) {
-        damagePrevented = aAtk;
-      }
+      const canKill = bAtk >= aDef;
+      const canSurvive = bDef > aAtk;
 
-      // Always track how much damage would be stopped by this block
-      scores.push({
+      // Bonus: kill and survive
+      if (canKill && canSurvive) score += 1.0;
+      else if (canKill) score += 0.5;
+      else if (canSurvive) score += 0.25;
+
+      // Extra weight: attacker is lethal threat
+      if (aAtk >= cpuLife) score += 2.0;
+
+      // Extra weight: attacker is 3+ power (efficient block)
+      if (aAtk >= 3) score += 0.5;
+
+      scoreMatrix.push({
         blockerId: blocker.id,
-        attackerId: attacker.id,
-        damagePrevented,
+        attackerId: aId,
+        score,
       });
     }
   }
 
-  // Sort score matrix by descending damage prevented
-  scores.sort((a, b) => b.damagePrevented - a.damagePrevented);
+  // Sort by descending score — globally best matches come first
+  scoreMatrix.sort((a, b) => b.score - a.score);
 
-  for (const { blockerId, attackerId } of scores) {
-    if (usedBlockers.has(blockerId) || usedAttackers.has(attackerId)) continue;
+  // Assign each blocker to attacker greedily based on max score
+  for (const { blockerId, attackerId } of scoreMatrix) {
+    if (assignedBlockers.has(blockerId)) continue;
+    if (assignedAttackers.has(attackerId)) continue;
 
     blockAssignments[attackerId] = blockerId;
-    usedBlockers.add(blockerId);
-    usedAttackers.add(attackerId);
+    assignedBlockers.add(blockerId);
+    assignedAttackers.add(attackerId);
   }
 
   return blockAssignments;
