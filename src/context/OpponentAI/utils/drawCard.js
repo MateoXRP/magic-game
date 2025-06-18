@@ -10,7 +10,7 @@ export function drawCard(library, hand) {
 
   const [card, ...remainingLibrary] = library;
   const updatedHand = [...hand, card];
-  logs.push(`📅 Opponent draws ${card.name}.`);
+  logs.push(`📅 Opponent draws a card`); 
 
   return { library: remainingLibrary, hand: updatedHand, log: logs.join("\n") };
 }

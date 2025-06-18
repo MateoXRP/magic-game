@@ -92,7 +92,7 @@ export default function StartScreen({ onStart }) {
     setLog(prev => [
       ...prev,
       `🃏 Your opening hand: ${fullPlayerDeck.slice(0, 7).map(c => c.name).join(", ")}`,
-      `🃏 Opponent's opening hand: ${fullCpuDeck.slice(0, 7).map(c => c.name).join(", ")}`,
+      `🃏 Opponent draws their opening hand.`,
     ]);
   }
 

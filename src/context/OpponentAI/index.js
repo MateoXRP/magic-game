@@ -47,7 +47,7 @@ export function runOpponentTurn(state, onComplete = () => {}) {
 
     try {
       logMessages.push(`🤖 Opponent's turn begins.`);
-      logMessages.push(`🧠 Hand: ${hand.map(c => c.name).join(", ")}`);
+      // logMessages.push(`🧠 Hand: ${hand.map(c => c.name).join(", ")}`);
       logMessages.push(`❤️ CPU Life: ${opponentLife} | Player Life: ${playerLife}`);
       logMessages.push(`🔄 Untapped all battlefield cards.`);
 

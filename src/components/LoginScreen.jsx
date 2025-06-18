@@ -11,7 +11,7 @@ export default function LoginScreen({ onLogin }) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6 space-y-6">
-      <h1 className="text-3xl font-bold">🧙 Welcome to Magic Game</h1>
+      <h1 className="text-3xl font-bold">🧙 Magic Game</h1>
       <input
         className="px-4 py-2 rounded text-black w-64"
         placeholder="Enter your name"
